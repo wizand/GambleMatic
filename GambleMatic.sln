@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GambleMaticDataLib", "GambleMaticDataLib\GambleMaticDataLib.csproj", "{1AAAA2BE-B24D-41B8-845D-8F20DF8E14C0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GambleMaticWebApp", "GambleMaticWebApp\GambleMaticWebApp.csproj", "{398ADF47-29FF-4CB4-AEA6-8D9FCD6D86ED}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1AAAA2BE-B24D-41B8-845D-8F20DF8E14C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AAAA2BE-B24D-41B8-845D-8F20DF8E14C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AAAA2BE-B24D-41B8-845D-8F20DF8E14C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AAAA2BE-B24D-41B8-845D-8F20DF8E14C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{398ADF47-29FF-4CB4-AEA6-8D9FCD6D86ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{398ADF47-29FF-4CB4-AEA6-8D9FCD6D86ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{398ADF47-29FF-4CB4-AEA6-8D9FCD6D86ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{398ADF47-29FF-4CB4-AEA6-8D9FCD6D86ED}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {96A0258B-6430-4201-AF8E-C98CC85A1E9C}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,196 @@
+﻿@page "/gambles"
+@using GambleMaticWebApp.Data
+@inject GameDataService _gameDataService
+<PageTitle>Players</PageTitle>
+
+<h1>Gambles Management page</h1>
+
+
+<Div id="playerSelectionDiv" Class="row">
+    <Div Class="td">
+        <Span>Player:</Span>
+    </Div>
+    <Div Class="td">
+        <Select TValue="int" SelectedValueChanged="@OnSelectedPlayerChanged">
+            @{
+                int index = 0;
+                foreach (var player in StoredPlayers)
+                {
+                    <SelectItem Value="@index">@player.Name</SelectItem>
+                    index = index + 1;
+                }
+            }
+        </Select>
+    </Div>
+</Div>
+
+
+
+<Div id="gamesListDiv" Class="container">
+    <Div class="row">
+        <Div class="col">
+            <h2>@HeaderText</h2>
+            <h3>@GambleRowChecksum</h3>
+            <Button Color="Color.Success" onclick="@OnSavePlayerGamble">Save gamble for player!</Button>
+        </Div>
+    </Div>
+    <Div class="row">
+        <Div class="col">
+            <Table Striped Hoverable Bordered>
+                <TableHeader>
+                    <TableRow>
+                        <TableHeaderCell>Date</TableHeaderCell>
+                        <TableHeaderCell>Home</TableHeaderCell>
+                        <TableHeaderCell>Away</TableHeaderCell>
+                        <TableHeaderCell>Result guess</TableHeaderCell>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+            @{
+                foreach (var gamePrediction in ListOfGamePredictions)
+                {
+                    <TableRow>
+                        <TableRowCell>@gamePrediction.GameView.GameDayStr</TableRowCell>
+                        <TableRowCell Style="text-align: center;">@gamePrediction.GameView.Home</TableRowCell>
+                        <TableRowCell Style="text-align: center;">@gamePrediction.GameView.Away</TableRowCell>
+                        <TableRowCell>
+                            <RadioGroup TValue="int" Name="game result" @bind-CheckedValue="gamePrediction.Prediction" Buttons>
+                                <Radio Value="-1">HOME</Radio>
+                                <Radio Value="0">DRAW</Radio>
+                                <Radio Value="1">AWAY</Radio>
+                            </RadioGroup>
+                        </TableRowCell>
+
+                    </TableRow>
+                }
+            }
+                </TableBody>
+            </Table>
+        </Div>
+    </Div>
+</Div>
+
+<Button Color="Color.Success" onclick="@OnSavePlayerGamble">Save gamble for player!</Button>
+
+@code {
+    PlayerModelViewModel selectedPlayer { get; set; } = new();
+
+    List<PlayerModelViewModel> StoredPlayers = new();
+    List<GameModelViewModel> StoredGames = new();
+    List<GameAndPredictionViewModel> ListOfGamePredictions = new();
+
+    public string GambleRowChecksum { get; set; } = "";
+
+    public string HeaderText { get; set; } = "Create new gambles!";
+    public bool IsCreatingNew = true;
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshPlayersList();
+        await RefreshGamesList();
+        await OnSelectedPlayerChanged(0);
+    }
+
+    public async Task OnSelectedPlayerChanged(int selectedValue)
+    {
+        selectedPlayer = StoredPlayers[selectedValue];
+
+        var ctw = selectedPlayer.GetPlayerModel().GambleItemModels;
+        Console.WriteLine("Selected player index: " + selectedValue + " selected player name: " + selectedPlayer.Name + " gambles: " + ctw.Count);
+
+
+        //There are no previous games saved or the data doesnt correspond to the amount of games
+        if (ctw == null || ctw.Count == 0 || ctw.Count != StoredGames.Count)
+        {
+            HeaderText = "Create new gambles for player " + selectedPlayer.Name;
+            IsCreatingNew = true;
+            await RefreshNewGamesAndPredictionsList();
+        }
+        else
+        {
+            HeaderText = "Editing gambles for player " + selectedPlayer.Name;
+            IsCreatingNew = false;
+            await RefreshExistingGamblesAndPredictionsList(ctw);
+        }
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (var prediction in ListOfGamePredictions)
+        {
+            switch (prediction.Prediction)
+            {
+                case -1:
+                    sb.Append("H");
+                    break;
+                case 0:
+                    sb.Append("D");
+                    break;
+                case 1:
+                    sb.Append("A");
+                    break;
+            }
+        }
+
+        GambleRowChecksum = sb.ToString();
+    }
+
+    public async Task OnSavePlayerGamble()
+    {
+        int removedCount = await _gameDataService.RemoveExistingGamblesForPlayer(selectedPlayer.GetPlayerModel().PlayerModelId);
+        Console.WriteLine("Removed " + removedCount + " previous gambles for player " + selectedPlayer.Name);
+
+        List<GambleItemModel> newGambles = new();
+        foreach (var pred in ListOfGamePredictions)
+        {
+            GambleItemModel newGamble = new GambleItemModel();
+            newGamble.PlayerModelId = selectedPlayer.GetPlayerModel().PlayerModelId;
+            newGamble.GameModelId = pred.GameView.GetGameModel().GameModelId;
+            newGamble.Guess = pred.Prediction;
+            newGambles.Add(newGamble);
+        }
+
+        int addedGambles = await _gameDataService.SaveGambles(newGambles);
+        Console.WriteLine("Saved " + addedGambles + " gambles for player " + selectedPlayer);
+        await RefreshPlayersList();
+    }
+
+
+    public async Task RefreshPlayersList()
+    {
+        var playerModels = await _gameDataService.GetPlayerModelsFromDatabaseAsync();
+        StoredPlayers = new();
+        foreach (PlayerModel playerModel in playerModels)
+        {
+            StoredPlayers.Add(new PlayerModelViewModel(playerModel));
+        }
+    }
+
+    public async Task RefreshGamesList()
+    {
+        var gameModels = await _gameDataService.GetGameModelsFromDatabaseAsync();
+        StoredGames = new();
+        foreach (GameModel gameModel in gameModels)
+        {
+            StoredGames.Add(new GameModelViewModel(gameModel));
+        }
+    }
+
+    public async Task RefreshNewGamesAndPredictionsList()
+    {
+        ListOfGamePredictions = new List<GameAndPredictionViewModel>();
+        foreach (GameModelViewModel gameView in StoredGames)
+        {
+            ListOfGamePredictions.Add(new GameAndPredictionViewModel(gameView));
+        }
+        await Task.CompletedTask; //Just to get rid of the warning
+    }
+
+    public async Task RefreshExistingGamblesAndPredictionsList(List<GambleItemModel> existingGamblesForPlayer)
+    {
+        ListOfGamePredictions = new List<GameAndPredictionViewModel>();
+        foreach (GambleItemModel gambleItem in existingGamblesForPlayer)
+        {
+            ListOfGamePredictions.Add(new GameAndPredictionViewModel(gambleItem));
+        }
+        await Task.CompletedTask; //Just to get rid of the warning
+    }
+}
+

@@ -1,0 +1,99 @@
+﻿@page "/"
+@inject GameDataService _gameDataService
+<PageTitle>Gamble matic statistics</PageTitle>
+
+<h1>Player points</h1>
+
+<Table Striped Hoverable>
+    <TableHeader>
+        <TableRow>
+            <TableHeaderCell>Player</TableHeaderCell>
+            <TableHeaderCell>Points</TableHeaderCell>
+        </TableRow>
+    </TableHeader>
+    <TableBody>
+        @{
+            foreach(var player in StoredPlayers) 
+            {
+            <TableRow>
+                <TableRowCell>@player.ShortName</TableRowCell>
+                <TableRowCell>@mapPointsPerPlayer[player]</TableRowCell>
+            </TableRow>
+            }
+        }
+    </TableBody>
+
+</Table>
+
+
+
+
+
+@code
+{
+    List<PlayerModelViewModel> StoredPlayers;
+    List<GameModelViewModel> StoredGames;
+    Dictionary<PlayerModelViewModel, int> mapPointsPerPlayer = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshPlayers();
+        await RefreshGames();
+
+        await RefreshPointsPerPlayers();
+
+    }
+
+
+    public async Task RefreshPlayers()
+    { 
+        StoredPlayers = new();
+        var playerModels = await _gameDataService.GetPlayerModelsFromDatabaseAsync();
+        foreach (var pm in playerModels)
+        {
+            PlayerModelViewModel pmv = new(pm);
+            StoredPlayers.Add(pmv);
+        }
+    }
+
+    public async Task RefreshGames()
+    { 
+        StoredGames = new();
+        var gameModels = await _gameDataService.GetGameModelsFromDatabaseAsync();
+        foreach (var gm in gameModels)
+        {
+            GameModelViewModel gmv = new(gm);
+            StoredGames.Add(gmv);
+        }
+    }
+
+    public int GetPlayerPoints(PlayerModelViewModel pmvm)
+    {
+        int playerPoints = 0;
+        var pm = pmvm.GetPlayerModel();
+        foreach (GambleItemModel gim in pm.GambleItemModels)
+        {
+            if (gim.Guess == gim.GameModel.ResultInt)
+            {
+                playerPoints = playerPoints + 1;
+            }
+        }
+        return playerPoints;
+    }
+
+    public async Task RefreshPointsPerPlayers() 
+    {
+        mapPointsPerPlayer = new();
+        int points = 0;
+        foreach (var pmvm in StoredPlayers)
+        {
+            points = 0;
+            points = GetPlayerPoints(pmvm);
+            mapPointsPerPlayer[pmvm] = points;
+        }
+    }
+
+
+}
+
+

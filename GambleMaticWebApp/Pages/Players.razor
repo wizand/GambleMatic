@@ -1,0 +1,227 @@
+﻿@page "/players"
+@inject GameDataService _gameDataService
+<PageTitle>Players</PageTitle>
+
+<h1>Players Management page</h1>
+
+<Div id="Insert player">
+    <Table>
+        <TableRow>
+            <TableRowCell>Name</TableRowCell>
+            <TableRowCell>
+                <TextEdit @bind-Text="@newPlayerModel.Name" Placeholder="Player name" />
+            </TableRowCell>
+        </TableRow>
+        <TableRow>
+            <TableRowCell>Short name</TableRowCell>
+            <TableRowCell>
+                <TextEdit @bind-Text="@newPlayerModel.ShortName" Placeholder="Short name" />
+            </TableRowCell>
+        </TableRow>
+        <TableRow>
+            <TableRowCell>Email</TableRowCell>
+            <TableRowCell>
+                <TextEdit @bind-Text="@newPlayerModel.Email" Placeholder="Email add" />
+            </TableRowCell>
+        </TableRow>
+    </Table>
+    <Button Color="Color.Success" onclick="@AddNewPlayerAsync">Save new player</Button>
+</Div>
+
+<Modal @ref="modalRef">
+    <ModalContent Size="ModalSize.Fullscreen">
+        <ModalHeader>
+            <ModalTitle>Player data edit</ModalTitle>
+            <CloseButton />
+        </ModalHeader>
+        <ModalBody>
+            <Field>
+                <FieldLabel>Name</FieldLabel>
+                <TextEdit Placeholder="@MName" @bind-Text="@MName"/>
+            </Field>
+            <Field>
+                <FieldLabel>Short name</FieldLabel>
+                <TextEdit Placeholder="@MShortName" @bind-Text="@MShortName" />
+            </Field>
+            <Field>
+                <FieldLabel>Email</FieldLabel>
+                <TextEdit Placeholder="@MEmail" @bind-Text="@MEmail" />
+            </Field>
+            <Field>
+                <FieldLabel>Has paid</FieldLabel>
+                <Check TValue="bool" @bind-Checked="@MHasPaid" />
+            </Field>
+            <Field>
+                <FieldLabel>Has returned ticket</FieldLabel>
+                <Check TValue="bool" @bind-Checked="@MTicket" />
+            </Field>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@CloseModal">Close</Button>
+            <Button Color="Color.Primary" Clicked="@SaveChanges">Save Changes</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+
+
+<Div id="Players List">
+    <h2>Players in database:</h2>
+    <Table Striped Hoverable Bordered>
+        <TableHeader>
+            <TableRow>
+                <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>Short hand</TableHeaderCell>
+                <TableHeaderCell>Email</TableHeaderCell>
+                <TableHeaderCell>Has paid</TableHeaderCell>
+                <TableHeaderCell>Ticket returned</TableHeaderCell> 
+                <TableHeaderCell>Gambles set</TableHeaderCell>
+                <TableHeaderCell>Edit</TableHeaderCell>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+@{
+    foreach (var player in @StoredPlayers)
+    {
+            <TableRow>
+                <TableRowCell>@player.Name</TableRowCell>
+                <TableRowCell>@player.ShortName</TableRowCell>
+                <TableRowCell>@player.Email</TableRowCell>
+                <TableRowCell>@player.HasPaidStr</TableRowCell>
+                <TableRowCell>@player.TicketDelivered</TableRowCell>
+                <TableRowCell>@player.IsGambleRowStored</TableRowCell>
+                <TableRowCell><Button Color="Color.Primary" Clicked="@((p) => ShowModal(@player))">Edit</Button></TableRowCell>
+            </TableRow>
+    }
+}
+        </TableBody>
+    </Table>
+</Div>
+
+
+
+@code {
+    private Modal? modalRef;
+    private string MName { get; set; }
+    private string MShortName { get; set; }
+    private string MEmail { get; set; }
+    private bool MHasPaid { get; set; }
+    private bool MTicket  { get; set; }
+    private PlayerModel playerModelUnderEdit = null;
+    private bool cancelClose = false;
+
+    private Task ShowModal(PlayerModelViewModel playerModel)
+    {
+        playerModelUnderEdit = playerModel.GetPlayerModel();
+        MName = playerModel.Name;
+        MShortName = playerModel.ShortName;
+        MEmail = playerModel.Email;
+
+        MHasPaid = false;
+        if ( playerModelUnderEdit.Paid == 1) { MHasPaid = true; }
+        MTicket = false;
+        if (playerModelUnderEdit.Ticket == 1) { MTicket = true; }
+
+        return modalRef.Show();
+    }
+
+    private async Task SaveChanges()
+    {
+        cancelClose = false;
+        if (false == HasModelChanged() )
+        {
+            Console.WriteLine("No changes to the player model.");
+            await modalRef.Hide();
+            return;
+        }
+
+        playerModelUnderEdit.Name = MName;
+        playerModelUnderEdit.ShortName = MShortName;
+        playerModelUnderEdit.Email = MEmail;
+        playerModelUnderEdit.Paid = 0;
+        if (MHasPaid) { playerModelUnderEdit.Paid = 1; }
+        playerModelUnderEdit.Ticket = 0;
+        if (MTicket) { playerModelUnderEdit.Ticket = 1; }
+
+        int result = await _gameDataService.SaveChangesToPlayer(playerModelUnderEdit);
+        Console.WriteLine(result + " changes made to player " + playerModelUnderEdit.Name);
+        playerModelUnderEdit = null;
+        await modalRef.Hide();
+    }
+
+    public bool HasModelChanged()
+    {
+        if (!playerModelUnderEdit.Name.Equals(MName))
+            return true;
+        if (!playerModelUnderEdit.ShortName.Equals(MShortName))
+            return true;
+        if (playerModelUnderEdit.Email == null && MEmail.Length != 0)
+            return true;
+        if (playerModelUnderEdit.Email != null) 
+            if (!playerModelUnderEdit.Email.Equals(MEmail))
+                return true;
+        if (playerModelUnderEdit.Paid == 0 && MHasPaid == true)
+            return true;
+        if (playerModelUnderEdit.Ticket == 0 && MTicket == true)
+            return true;
+        return false;
+    }       
+
+
+    private Task CloseModal()
+    { 
+
+
+        return modalRef.Hide();
+    }
+
+
+    List<PlayerModelViewModel> StoredPlayers = new();
+    NewPlayerViewModel newPlayerModel = new();
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshPlayersList();
+    }
+
+    public async Task AddNewPlayerAsync()
+    {
+        if (String.IsNullOrWhiteSpace(newPlayerModel.Name) ||
+             String.IsNullOrWhiteSpace(newPlayerModel.ShortName))
+        {
+            Console.WriteLine("Invalid game object: " + newPlayerModel.ToString());
+            return;
+        }
+
+        Console.WriteLine("Creating a new player: " + newPlayerModel.ToString());
+
+        PlayerModel pm = new PlayerModel( newPlayerModel.Name, newPlayerModel.ShortName, newPlayerModel.Email);
+
+        await _gameDataService.AddPlayerToDatabaseAsync(pm);
+        newPlayerModel = new();
+        await RefreshPlayersList();
+
+    }
+
+    public async Task RefreshPlayersList()
+    { 
+        var playerModels = await _gameDataService.GetPlayerModelsFromDatabaseAsync();
+        StoredPlayers = new();
+        foreach (PlayerModel playerModel in playerModels)
+        {
+            StoredPlayers.Add(new PlayerModelViewModel(playerModel));
+        }
+    }
+
+    internal class NewPlayerViewModel
+    {
+        public string Name { get; set; }
+        public string ShortName { get; set; }
+        public string Email { get; set; }
+
+        public override string ToString()
+        {
+            return Name + " known as " + ShortName + " with email " + Email; 
+        }
+    }
+
+}

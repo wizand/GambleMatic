@@ -1,0 +1,181 @@
+﻿@page "/games"
+@inject GameDataService _gameDataService
+<PageTitle>Games</PageTitle>
+
+<h1>Games Management page</h1>
+
+<Div id="Insert game">
+    <Table Striped Hoverable Bordered>
+
+        <TableRow>
+            <TableRowCell>Date</TableRowCell>
+            <TableRowCell>
+               <!--
+               <Addons>
+                    <Addon AddonType="AddonType.Body">
+                        <DatePicker @ref="@datePicker" TValue="DateTime?" Placeholder="@Today"/>
+                    </Addon>
+                    <Addon AddonType="AddonType.End">
+                        <Button Color="Color.Light" Clicked="@(()=>datePicker.ToggleAsync())">
+                            <Icon Name="IconName.CalendarDay" />
+                        </Button>
+                        <FieldHelp>Format: DD.MM YYYY</FieldHelp>
+                    </Addon>
+                </Addons>
+               --> 
+                <div class="input-group date" data-provide="datepicker">
+                    <input type="date" class="form-control" @bind="newGameModel.Date">
+                    <div class="input-group-addon">
+                        <span class="glyphicon glyphicon-th"></span>
+                    </div>
+                </div>
+            </TableRowCell>
+        </TableRow>
+        <TableRow>
+            <TableRowCell>Home</TableRowCell>
+            <TableRowCell>
+                <TextEdit @bind-Text="@newGameModel.Home" Placeholder="Home team name" />
+            </TableRowCell>
+        </TableRow>
+        <TableRow>
+            <TableRowCell>Away</TableRowCell>
+            <TableRowCell>
+                <TextEdit @bind-Text="@newGameModel.Away" Placeholder="Away team name" />
+            </TableRowCell>
+        </TableRow>
+    </Table>
+    <Button Color="Color.Success" onclick="@AddNewGameAsync">Save new game entry</Button>
+
+</Div>
+
+<Div id="GamesList">
+    <h2>Games in database:</h2>
+    <Button Color="Color.Primary" Clicked="@UpdateGameResults">Update all results</Button>
+    <Table Striped Hoverable Bordered>
+        <TableHeader>
+            <TableRow>
+                <TableHeaderCell>Date</TableHeaderCell>
+                <TableHeaderCell>HOME</TableHeaderCell>
+                <TableHeaderCell>AWAY</TableHeaderCell>
+                <TableHeaderCell>RESULT</TableHeaderCell>
+                <TableHeaderCell>NEW RESULT</TableHeaderCell>
+                <TableHeaderCell>Update</TableHeaderCell>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+    @{
+        foreach (var game in @StoredGames)
+        {
+            <TableRow>
+                <TableRowCell>@game.GameDayStr</TableRowCell>
+                <TableRowCell>@game.Home</TableRowCell>
+                <TableRowCell>@game.Away</TableRowCell>
+                <TableRowCell>@game.ResultStr</TableRowCell>
+                <TableRowCell>
+                    <RadioGroup TValue="int" Name="Game result" @bind-CheckedValue="@game.ResultInt" Buttons>
+                        <Radio Value="-99">NO RESULT</Radio>
+                        <Radio Value="-1">HOME</Radio>
+                        <Radio Value="0">DRAW</Radio>
+                        <Radio Value="1">AWAY</Radio>
+                    </RadioGroup>
+                </TableRowCell>
+                <TableRowCell>
+                    <Button Color="Color.Primary" Clicked="@((p) => UpdateGameResult(@game))">Update result</Button>
+                </TableRowCell>
+            </TableRow>
+        }
+    }
+        </TableBody>
+    </Table>
+</Div>
+
+
+
+@code {
+
+    //DatePicker<DateTime?> datePicker;
+    //string Today = "";
+
+
+    List<GameModelViewModel> StoredGames = new();
+    NewGameViewModel newGameModel = new();
+    protected override async Task OnInitializedAsync()
+    {
+        //Today = DateTime.UtcNow.ToString("d");
+        await RefreshGamesList();
+    }
+
+    public async Task AddNewGameAsync()
+    {
+        if ( String.IsNullOrWhiteSpace(newGameModel.Home) ||
+             String.IsNullOrWhiteSpace(newGameModel.Away) )
+        {
+            Console.WriteLine("Invalid game object: " + newGameModel.ToString());
+            return;
+        }
+
+        Console.WriteLine("Creating a new game: " + newGameModel.ToString());
+
+        GameModel gm = new GameModel(newGameModel.Date, newGameModel.Home, newGameModel.Away, null );
+        await _gameDataService.AddGameToDatabaseAsync(gm);
+        newGameModel = new();
+        await RefreshGamesList();
+
+    }
+
+    public async Task UpdateGameResult(GameModelViewModel gameToUpdate)
+    {
+        if ( gameToUpdate.OriginalResult == gameToUpdate.ResultInt)
+        {
+            Console.WriteLine("No change in " + gameToUpdate.MatchTitle + " result: " + gameToUpdate.ResultInt + " vs " + gameToUpdate.OriginalResult);
+            return;
+        }
+        int result = await _gameDataService.UpdateGameResults(gameToUpdate.GetGameModel());
+        Console.WriteLine("Game results updated for game " + gameToUpdate.MatchTitle + " from " + gameToUpdate.OriginalResult + " to " + gameToUpdate.ResultInt);
+        await RefreshGamesList();
+    }
+
+    public async Task UpdateGameResults()
+    { 
+        List<GameModel> gameModelsToUpdate = new();
+        foreach (var gameModelViewModel in StoredGames)
+        {
+            if (gameModelViewModel.ResultInt != gameModelViewModel.OriginalResult)
+            {
+                gameModelsToUpdate.Add(gameModelViewModel.GetGameModel());
+            }
+        }
+        int result = 0;
+        if (gameModelsToUpdate.Count > 0)
+        { 
+            result = await _gameDataService.UpdateMultipleGameResults(gameModelsToUpdate);
+        }
+        Console.WriteLine("Game results updated for " + result + " games.");
+        await RefreshGamesList();
+    }
+
+
+
+    public async Task RefreshGamesList()
+    { 
+        var gameModels = await _gameDataService.GetGameModelsFromDatabaseAsync();
+        StoredGames = new();
+        foreach (GameModel gameModel in gameModels)
+        {
+            StoredGames.Add(new GameModelViewModel(gameModel));
+        }
+    }
+
+    internal class NewGameViewModel
+    {
+        public DateTime Date { get; set; } = DateTime.UtcNow;
+        public string Home { get; set; }
+        public string Away { get; set; }
+
+        public override string ToString()
+        {
+            return Date.ToShortDateString() + " " + Home + " vs " + Away; 
+        }
+    }
+
+}
