@@ -6,23 +6,9 @@
 
 <Div id="Insert game">
     <Table Striped Hoverable Bordered>
-
         <TableRow>
             <TableRowCell>Date</TableRowCell>
             <TableRowCell>
-               <!--
-               <Addons>
-                    <Addon AddonType="AddonType.Body">
-                        <DatePicker @ref="@datePicker" TValue="DateTime?" Placeholder="@Today"/>
-                    </Addon>
-                    <Addon AddonType="AddonType.End">
-                        <Button Color="Color.Light" Clicked="@(()=>datePicker.ToggleAsync())">
-                            <Icon Name="IconName.CalendarDay" />
-                        </Button>
-                        <FieldHelp>Format: DD.MM YYYY</FieldHelp>
-                    </Addon>
-                </Addons>
-               --> 
                 <div class="input-group date" data-provide="datepicker">
                     <input type="date" class="form-control" @bind="newGameModel.Date">
                     <div class="input-group-addon">

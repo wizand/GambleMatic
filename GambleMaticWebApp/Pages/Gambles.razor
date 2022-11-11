@@ -16,7 +16,7 @@
                 int index = 0;
                 foreach (var player in StoredPlayers)
                 {
-                    <SelectItem Value="@index">@player.Name</SelectItem>
+                        <SelectItem Value="@index">@player.Name</SelectItem>
                     index = index + 1;
                 }
             }
@@ -27,15 +27,25 @@
 
 
 <Div id="gamesListDiv" Class="container">
-    <Div class="row">
-        <Div class="col">
+    <Div Class="row">
+        <Div Class="col">
             <h2>@HeaderText</h2>
             <h3>@GambleRowChecksum</h3>
-            <Button Color="Color.Success" onclick="@OnSavePlayerGamble">Save gamble for player!</Button>
+            
         </Div>
     </Div>
-    <Div class="row">
-        <Div class="col">
+    <Div Class="row" Style="margin-bottom: 50px;">
+        <Div Class="col"><TextEdit @bind-Text="@GambleRowChecksumToSave" Placeholder="Enter a gamble checksum here" /></Div>
+        <Div Class="col"><Button Color="Color.Success" onclick="@OnSavePlayerGambleFromChecksum">Save gamble row from checksum</Button></Div>
+    </Div>
+    <Div Class="row">
+         <Div Class="col">
+             <Button Color="Color.Success" onclick="@OnSavePlayerGamble">Save gamble row for player!</Button>
+         </Div>
+    </Div>
+    <Div Class="row">
+            
+        <Div Class="col">
             <Table Striped Hoverable Bordered>
                 <TableHeader>
                     <TableRow>
@@ -49,28 +59,29 @@
             @{
                 foreach (var gamePrediction in ListOfGamePredictions)
                 {
-                    <TableRow>
-                        <TableRowCell>@gamePrediction.GameView.GameDayStr</TableRowCell>
-                        <TableRowCell Style="text-align: center;">@gamePrediction.GameView.Home</TableRowCell>
-                        <TableRowCell Style="text-align: center;">@gamePrediction.GameView.Away</TableRowCell>
-                        <TableRowCell>
-                            <RadioGroup TValue="int" Name="game result" @bind-CheckedValue="gamePrediction.Prediction" Buttons>
-                                <Radio Value="-1">HOME</Radio>
-                                <Radio Value="0">DRAW</Radio>
-                                <Radio Value="1">AWAY</Radio>
-                            </RadioGroup>
-                        </TableRowCell>
+                        <TableRow>
+                            <TableRowCell>@gamePrediction.GameView.GameDayStr</TableRowCell>
+                            <TableRowCell Style="text-align: center;">@gamePrediction.GameView.Home</TableRowCell>
+                            <TableRowCell Style="text-align: center;">@gamePrediction.GameView.Away</TableRowCell>
+                            <TableRowCell>
+                                <RadioGroup TValue="int" Name="game result" @bind-CheckedValue="gamePrediction.Prediction" Buttons>
+                                    <Radio Value="-1">HOME</Radio>
+                                    <Radio Value="0">DRAW</Radio>
+                                    <Radio Value="1">AWAY</Radio>
+                                </RadioGroup>
+                            </TableRowCell>
 
-                    </TableRow>
+                        </TableRow>
                 }
             }
                 </TableBody>
             </Table>
+            <Button Color="Color.Success" onclick="@OnSavePlayerGamble">Save gamble for player!</Button>
         </Div>
     </Div>
+
 </Div>
 
-<Button Color="Color.Success" onclick="@OnSavePlayerGamble">Save gamble for player!</Button>
 
 @code {
     PlayerModelViewModel selectedPlayer { get; set; } = new();
@@ -80,6 +91,7 @@
     List<GameAndPredictionViewModel> ListOfGamePredictions = new();
 
     public string GambleRowChecksum { get; set; } = "";
+    public string GambleRowChecksumToSave { get; set; } = "";
 
     public string HeaderText { get; set; } = "Create new gambles!";
     public bool IsCreatingNew = true;
@@ -152,6 +164,46 @@
         await RefreshPlayersList();
     }
 
+    public async Task OnSavePlayerGambleFromChecksum()
+    {
+        string tmp = GambleRowChecksumToSave.Trim().ToUpper();
+        if (tmp.Length != StoredGames.Count)
+        {
+            Console.WriteLine("Invalid checksum len. ChecksumLen = [" + tmp.Length + "]" + " games count = [" + StoredGames.Count + "]");
+            return;
+        }
+
+        string correctKeys = "HDTA";
+        foreach (char c in tmp)
+        {
+            if (!correctKeys.Contains(c))
+            {
+                Console.WriteLine("Checksum " + tmp + " has key " + c + " which isnt included in valid keys: " + correctKeys);
+                return;
+            }
+        }
+
+        for (int gameIndex = 0; gameIndex < StoredGames.Count; gameIndex++)
+        {
+            switch (tmp[gameIndex]) 
+            {
+                case 'H':
+                    ListOfGamePredictions[gameIndex].Prediction = -1;
+                    break;
+                case 'T':
+                case 'D':
+                    ListOfGamePredictions[gameIndex].Prediction = 0;
+                    break;
+                case 'A':
+                    ListOfGamePredictions[gameIndex].Prediction = 1;
+                    break;
+            }
+        }
+
+        Console.WriteLine("Saving a gamble row from checksum " + tmp + " to player " + selectedPlayer.Name);
+        await OnSavePlayerGamble();
+
+    }
 
     public async Task RefreshPlayersList()
     {
