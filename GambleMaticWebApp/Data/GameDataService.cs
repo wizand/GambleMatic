@@ -1,5 +1,7 @@
 using GambleMaticDataLib;
 
+using Microsoft.EntityFrameworkCore.Update.Internal;
+
 public class GameDataService
 {
 
@@ -98,5 +100,53 @@ public class GameDataService
     {
         int updatedCount = await DbManager.SaveChangesToGames(gamesToUpdate);
         return updatedCount;
+    }
+
+
+
+
+    public async void RefreshTeamsCacheFromDb()
+    {
+        var gameModels = await GetGameModelsFromDatabaseAsync();
+        RefreshTeamCache(gameModels);
+    }
+
+    public void RefreshTeamsCacheFromList(List<GameModelViewModel> gameViewModels)
+    {
+        List<GameModel> gmList = new();
+        gameViewModels.ForEach(gameViewModel => gmList.Add(gameViewModel.GetGameModel()));
+
+        RefreshTeamCache(gmList);
+    }
+
+    private void RefreshTeamCache(List<GameModel> gameModels)
+    {
+        _teamsCache = new();
+        foreach (var gameModel in gameModels)
+        {
+            if (false == _teamsCache.Contains(gameModel.Home))
+            {
+                _teamsCache.Add(gameModel.Home);
+            }
+
+            if (false == _teamsCache.Contains(gameModel.Away))
+            {
+                _teamsCache.Add(gameModel.Away);
+            }
+        }
+        _teamsCache.Sort();
+    }
+
+    List<string> _teamsCache = null;
+    public List<string> AllTeams { 
+        get 
+        { 
+            if (_teamsCache == null)
+            {
+                RefreshTeamsCacheFromDb();
+            }
+
+            return _teamsCache;
+        }
     }
 }

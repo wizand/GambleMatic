@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using GambleMaticDataLib;
+
 public class PlayerModel
 {
 
@@ -32,6 +34,9 @@ public class PlayerModel
     public string? Email { get; set; }
     public int Paid { get; set; } = 0;
     public int Ticket { get; set; } = 0;
+
+
+    public ExtraGamblesModel ExtraGambles { get; set; }
 
     [InverseProperty("PlayerModel")]
     public List<GambleItemModel> GambleItemModels { get; set; } = new List<GambleItemModel>();

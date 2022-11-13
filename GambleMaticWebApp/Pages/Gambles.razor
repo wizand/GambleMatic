@@ -82,6 +82,63 @@
 
 </Div>
 
+<Div id="extraGambles">
+    <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHeaderCell>Semi final team 1:</TableHeaderCell>
+                <TableHeaderCell>Semi final team 2:</TableHeaderCell>
+                <TableHeaderCell>Semi final team 3:</TableHeaderCell>
+                <TableHeaderCell>Semi final team 4:</TableHeaderCell>
+                <TableHeaderCell>Gold medal team:</TableHeaderCell>
+                <TableHeaderCell>Silver medal team:</TableHeaderCell>
+                <TableHeaderCell>Goals in tournament:</TableHeaderCell>
+            </TableRow>
+            <TableRow>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam1">
+                        @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam2">
+                        @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam3">
+                        @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam4">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@SilverMedalTeam">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@GoldMedalTeam">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+            </TableRow>
+        </TableHeader>
+    </Table>
+</Div>
+
 
 @code {
     PlayerModelViewModel selectedPlayer { get; set; } = new();
@@ -99,8 +156,28 @@
     {
         await RefreshPlayersList();
         await RefreshGamesList();
+        _gameDataService.RefreshTeamsCacheFromList(StoredGames);
         await OnSelectedPlayerChanged(0);
     }
+
+    public List<string> TeamsList 
+    {
+        get 
+        {
+            if ( _gameDataService.AllTeams == null)
+            {
+                _gameDataService.RefreshTeamsCacheFromList(StoredGames);
+            }
+            return _gameDataService.AllTeams;
+        }
+    }
+    public string SemiFinalTeam1 { get; set; }
+    public string SemiFinalTeam2 { get; set; }
+    public string SemiFinalTeam3 { get; set; }
+    public string SemiFinalTeam4 { get; set; }
+    public string GoldMedalTeam { get; set; }
+    public string SilverMedalTeam { get; set; }
+    public string GoalAmount { get; set; }
 
     public async Task OnSelectedPlayerChanged(int selectedValue)
     {
@@ -223,6 +300,8 @@
         {
             StoredGames.Add(new GameModelViewModel(gameModel));
         }
+
+        _gameDataService.RefreshTeamsCacheFromList(StoredGames);
     }
 
     public async Task RefreshNewGamesAndPredictionsList()
