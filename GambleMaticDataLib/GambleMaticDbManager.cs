@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,14 +27,15 @@ namespace GambleMaticDataLib
         public async Task<List<GameModel>> GetAllGamesFromDatabase()
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
-            var res = await gambleMaticContext.Games.ToListAsync();
+            var res = await gambleMaticContext.Games.FromSqlRaw("SELECT * from Games ORDER BY GameOrderSortId asc").ToListAsync();
+            //res.OrderBy(g => g.GameOrderSortId);
             return res;
         }
 
         public async Task<List<PlayerModel>> GetAllPlayersFromDatabase()
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
-            var res = await gambleMaticContext.Players.Include(p=>p.GambleItemModels).ThenInclude(g=>g.GameModel).ToListAsync();
+            var res = await gambleMaticContext.Players.Include(p => p.ExtraGambles).Include(p=>p.GambleItemModels).ThenInclude(g=>g.GameModel).ToListAsync();
             return res;
         }
 
@@ -66,6 +68,14 @@ namespace GambleMaticDataLib
             gambleMaticContext.Players.Update(playerModelUnderEdit);
             int changesCount = await gambleMaticContext.SaveChangesAsync();
             return changesCount;
+        }
+
+        public async Task<int> SaveExtraGamblesToDatabase(ExtraGamblesModel extraGamblesModel)
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+            gambleMaticContext.ExtraGambles.Update(extraGamblesModel);
+            int savedOrUpdated = await gambleMaticContext.SaveChangesAsync();
+            return savedOrUpdated;
         }
 
         public async Task<int> SaveGambles(List<GambleItemModel> listOfGambles)

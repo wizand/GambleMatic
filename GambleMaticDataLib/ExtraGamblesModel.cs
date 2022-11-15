@@ -1,30 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GambleMaticDataLib
+public class ExtraGamblesModel
 {
-    public  class ExtraGamblesModel
-    {
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Key]
+    public long ExtraGamblesModelId { get; set; }
 
-        public long ExtraGamblesModelId { get; set; }
+    [MaxLength(255)]
+    public string SemifinalTeamOne { get; set; }
+    [MaxLength(255)]
+    public string SemifinalTeamTwo { get; set; }
+    [MaxLength(255)]
+    public string SemifinalTeamThree { get; set; }
+    [MaxLength(255)]
+    public string SemifinalTeamFour { get; set; }
+
+    [MaxLength(255)]
+    public string SilverTeam { get; set; }
+    [MaxLength(255)]
+    public string GoldTeam { get; set; }
+    [MaxLength(16)]
+    public string GoalsInTournament { get; set; }
+
+    public int PlayerModelId { get; set; }
+    public PlayerModel PlayerModel { get; set; }
 
 
-        public string SemifinalTeamOne { get; set; }
-        public string SemifinalTeamTwo { get; set; }
-        public string SemifinalTeamThree { get; set; }
-        public string SemifinalTeamFour { get; set; }
-
-
-        public string SilverTeam { get; set; }
-        public string GoldTeam { get; set; }
-        public int GoalsInTournamen { get; set; }
-
-        public int PlayerModelId { get; set; }
-        public PlayerModel PlayerModel;
-
-
-    }
 }
+

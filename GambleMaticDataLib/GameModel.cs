@@ -21,6 +21,7 @@ public class GameModel
     [Key]
     public int GameModelId { get; set; }
     public DateTime GameDay { get; set; } = DateTime.MinValue;
+    public int GameOrderSortId { get; set; } 
     [MaxLength(255)]
     public string Home { get; set; } = "";
     [MaxLength(255)]

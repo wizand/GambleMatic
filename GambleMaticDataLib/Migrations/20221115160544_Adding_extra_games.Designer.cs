@@ -4,6 +4,7 @@ using GambleMaticDataLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GambleMaticDataLib.Migrations
 {
     [DbContext(typeof(GambleMaticContext))]
-    partial class GambleMaticContextModelSnapshot : ModelSnapshot
+    [Migration("20221115160544_Adding_extra_games")]
+    partial class Adding_extra_games
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,7 +24,35 @@ namespace GambleMaticDataLib.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
-            modelBuilder.Entity("ExtraGamblesModel", b =>
+            modelBuilder.Entity("GambleItemModel", b =>
+                {
+                    b.Property<long>("GambleItemModelId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("GambleItemModelId"), 1L, 1);
+
+                    b.Property<int?>("GameModelId")
+                        .IsRequired()
+                        .HasColumnType("int");
+
+                    b.Property<int>("Guess")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PlayerModelId")
+                        .IsRequired()
+                        .HasColumnType("int");
+
+                    b.HasKey("GambleItemModelId");
+
+                    b.HasIndex("GameModelId");
+
+                    b.HasIndex("PlayerModelId");
+
+                    b.ToTable("Gambles");
+                });
+
+            modelBuilder.Entity("GambleMaticDataLib.ExtraGamblesModel", b =>
                 {
                     b.Property<long>("ExtraGamblesModelId")
                         .ValueGeneratedOnAdd()
@@ -30,10 +60,8 @@ namespace GambleMaticDataLib.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ExtraGamblesModelId"), 1L, 1);
 
-                    b.Property<string>("GoalsInTournament")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                    b.Property<int>("GoalsInTournamen")
+                        .HasColumnType("int");
 
                     b.Property<string>("GoldTeam")
                         .IsRequired()
@@ -74,34 +102,6 @@ namespace GambleMaticDataLib.Migrations
                         .IsUnique();
 
                     b.ToTable("ExtraGambles");
-                });
-
-            modelBuilder.Entity("GambleItemModel", b =>
-                {
-                    b.Property<long>("GambleItemModelId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("GambleItemModelId"), 1L, 1);
-
-                    b.Property<int?>("GameModelId")
-                        .IsRequired()
-                        .HasColumnType("int");
-
-                    b.Property<int>("Guess")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PlayerModelId")
-                        .IsRequired()
-                        .HasColumnType("int");
-
-                    b.HasKey("GambleItemModelId");
-
-                    b.HasIndex("GameModelId");
-
-                    b.HasIndex("PlayerModelId");
-
-                    b.ToTable("Gambles");
                 });
 
             modelBuilder.Entity("GameModel", b =>
@@ -169,17 +169,6 @@ namespace GambleMaticDataLib.Migrations
                     b.ToTable("Players");
                 });
 
-            modelBuilder.Entity("ExtraGamblesModel", b =>
-                {
-                    b.HasOne("PlayerModel", "PlayerModel")
-                        .WithOne("ExtraGambles")
-                        .HasForeignKey("ExtraGamblesModel", "PlayerModelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PlayerModel");
-                });
-
             modelBuilder.Entity("GambleItemModel", b =>
                 {
                     b.HasOne("GameModel", "GameModel")
@@ -195,6 +184,17 @@ namespace GambleMaticDataLib.Migrations
                         .IsRequired();
 
                     b.Navigation("GameModel");
+
+                    b.Navigation("PlayerModel");
+                });
+
+            modelBuilder.Entity("GambleMaticDataLib.ExtraGamblesModel", b =>
+                {
+                    b.HasOne("PlayerModel", "PlayerModel")
+                        .WithOne("ExtraGambles")
+                        .HasForeignKey("GambleMaticDataLib.ExtraGamblesModel", "PlayerModelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("PlayerModel");
                 });

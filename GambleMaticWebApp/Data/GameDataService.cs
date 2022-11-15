@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 using GambleMaticDataLib;
 
 using Microsoft.EntityFrameworkCore.Update.Internal;
@@ -102,6 +104,11 @@ public class GameDataService
         return updatedCount;
     }
 
+    public async Task<int> AddExtraGamblesToDatabaseAsync(ExtraGamblesModel extraGamblesModel)
+    {
+        int storedCount = await DbManager.SaveExtraGamblesToDatabase(extraGamblesModel);
+        return storedCount;
+    }
 
 
 
@@ -149,4 +156,49 @@ public class GameDataService
             return _teamsCache;
         }
     }
+
+    public List<string> _goalAmountOptions = null;
+    public List<string> GoalAmountOptions 
+    { 
+        get
+        {
+            if (_goalAmountOptions == null)
+            {
+                _goalAmountOptions = generateGoalAmounts(76, 235, 4);
+            }
+            return _goalAmountOptions;
+        }
+    }
+
+    //76-80
+    //81-85
+    //86-90
+    //...
+    private List<string> generateGoalAmounts(int min, int max, int step)
+    {
+        List<string> goalAmountOptions = new List<string>();
+
+        bool write = false;
+        string tmp = "";
+        for (int i = min; i <= max; i = i + step)
+        {
+            if (write)
+            {
+                tmp = tmp + " - " + i;
+                goalAmountOptions.Add(tmp);
+                i = i - 3;
+            }
+            else
+            {
+                tmp = "" + i;
+            }
+
+            write = !write;
+
+        }
+        return goalAmountOptions;
+    }
+
+
+
 }

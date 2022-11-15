@@ -96,52 +96,50 @@
             </TableRow>
             <TableRow>
                 <TableRowCell>
-                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam1">
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesViewModel.SemiFinalTeam1">
                         @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
                     </Select>
                 </TableRowCell>
                 <TableRowCell>
-                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam2">
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesViewModel.SemiFinalTeam2">
                         @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
                     </Select>
                 </TableRowCell>
                 <TableRowCell>
-                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam3">
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesViewModel.SemiFinalTeam3">
                         @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
                     </Select>
                 </TableRowCell>
                 <TableRowCell>
-                    <Select TValue="string" @bind-SelectedValue="@SemiFinalTeam4">
-                        @foreach (var team in TeamsList)
-                        {
-                            <SelectItem Value="@team">@team</SelectItem>
-                        }
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesViewModel.SemiFinalTeam4">
+                        @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
                     </Select>
                 </TableRowCell>
                 <TableRowCell>
-                    <Select TValue="string" @bind-SelectedValue="@SilverMedalTeam">
-                        @foreach (var team in TeamsList)
-                        {
-                            <SelectItem Value="@team">@team</SelectItem>
-                        }
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesViewModel.SilverMedalTeam">
+                        @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
                     </Select>
                 </TableRowCell>
                 <TableRowCell>
-                    <Select TValue="string" @bind-SelectedValue="@GoldMedalTeam">
-                        @foreach (var team in TeamsList)
-                        {
-                            <SelectItem Value="@team">@team</SelectItem>
-                        }
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesViewModel.GoldMedalTeam">
+                        @foreach (var team in TeamsList) { <SelectItem Value="@team">@team</SelectItem> }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesViewModel.GoalAmount">
+                        @foreach (var goals in GoalAmountOptions) { <SelectItem Value="@goals">@goals</SelectItem> }
                     </Select>
                 </TableRowCell>
             </TableRow>
         </TableHeader>
     </Table>
+    <Button Color="Color.Success" onclick="@OnSavePlayerExtraGambles">Save extra gambles for player!</Button>
 </Div>
 
 
 @code {
     PlayerModelViewModel selectedPlayer { get; set; } = new();
+    ExtraGamblesViewModel extraGamblesViewModel { get; set; } = new();
 
     List<PlayerModelViewModel> StoredPlayers = new();
     List<GameModelViewModel> StoredGames = new();
@@ -158,6 +156,9 @@
         await RefreshGamesList();
         _gameDataService.RefreshTeamsCacheFromList(StoredGames);
         await OnSelectedPlayerChanged(0);
+
+
+
     }
 
     public List<string> TeamsList 
@@ -171,13 +172,14 @@
             return _gameDataService.AllTeams;
         }
     }
-    public string SemiFinalTeam1 { get; set; }
-    public string SemiFinalTeam2 { get; set; }
-    public string SemiFinalTeam3 { get; set; }
-    public string SemiFinalTeam4 { get; set; }
-    public string GoldMedalTeam { get; set; }
-    public string SilverMedalTeam { get; set; }
-    public string GoalAmount { get; set; }
+
+    public List<string> GoalAmountOptions 
+    {
+        get 
+        {
+            return _gameDataService.GoalAmountOptions;
+        }
+    }
 
     public async Task OnSelectedPlayerChanged(int selectedValue)
     {
@@ -201,6 +203,19 @@
             await RefreshExistingGamblesAndPredictionsList(ctw);
         }
 
+        ExtraGamblesModel egModel = selectedPlayer.GetPlayerModel().ExtraGambles;
+        if (egModel != null)
+        {
+            extraGamblesViewModel = new ExtraGamblesViewModel(egModel);
+        }
+        else
+        {
+            string defaultTeam = TeamsList[1];
+            string defaultGoals = GoalAmountOptions[1];
+            extraGamblesViewModel = new ExtraGamblesViewModel(defaultTeam, defaultTeam, defaultTeam, defaultTeam, defaultTeam, defaultTeam, defaultGoals);
+        }
+
+
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         foreach (var prediction in ListOfGamePredictions)
         {
@@ -219,7 +234,34 @@
         }
 
         GambleRowChecksum = sb.ToString();
+
+
     }
+
+
+    public async Task OnSavePlayerExtraGambles() 
+    {
+        var player = selectedPlayer.GetPlayerModel();
+        ExtraGamblesModel extraGambles = player.ExtraGambles;
+        if (player.ExtraGambles == null)
+        {
+            extraGambles = new ExtraGamblesModel();
+        } 
+
+        extraGambles.SemifinalTeamOne = extraGamblesViewModel.SemiFinalTeam1;
+        extraGambles.SemifinalTeamTwo = extraGamblesViewModel.SemiFinalTeam2;
+        extraGambles.SemifinalTeamThree = extraGamblesViewModel.SemiFinalTeam3;
+        extraGambles.SemifinalTeamFour = extraGamblesViewModel.SemiFinalTeam4;
+        extraGambles.SilverTeam = extraGamblesViewModel.SilverMedalTeam;
+        extraGambles.GoldTeam = extraGamblesViewModel.GoldMedalTeam;
+        extraGambles.GoalsInTournament = extraGamblesViewModel.GoalAmount;
+
+        extraGambles.PlayerModelId = player.PlayerModelId;
+
+        int storedCount = await _gameDataService.AddExtraGamblesToDatabaseAsync(extraGambles);
+        Console.WriteLine("Stored extra gambles for player " + player.ShortName);
+        await RefreshPlayersList();
+    } 
 
     public async Task OnSavePlayerGamble()
     {
@@ -238,7 +280,10 @@
 
         int addedGambles = await _gameDataService.SaveGambles(newGambles);
         Console.WriteLine("Saved " + addedGambles + " gambles for player " + selectedPlayer);
-        await RefreshPlayersList();
+
+        await OnSavePlayerExtraGambles();
+
+        //already done in the extra gambles.. await RefreshPlayersList();
     }
 
     public async Task OnSavePlayerGambleFromChecksum()
