@@ -261,7 +261,13 @@
         int storedCount = await _gameDataService.AddExtraGamblesToDatabaseAsync(extraGambles);
         Console.WriteLine("Stored extra gambles for player " + player.ShortName);
         await RefreshPlayersList();
+        await OnSelectedPlayerChanged(getPlayerIndexFromList(selectedPlayer.GetPlayerModel()));
     } 
+
+
+
+
+
 
     public async Task OnSavePlayerGamble()
     {
@@ -281,9 +287,26 @@
         int addedGambles = await _gameDataService.SaveGambles(newGambles);
         Console.WriteLine("Saved " + addedGambles + " gambles for player " + selectedPlayer);
 
-        await OnSavePlayerExtraGambles();
+        //OnSavePlayerExtraGambles();
 
-        //already done in the extra gambles.. await RefreshPlayersList();
+        //already done in the extra gambles.. 
+        await RefreshPlayersList();
+        await OnSelectedPlayerChanged(getPlayerIndexFromList(selectedPlayer.GetPlayerModel()));
+    }
+
+    public int getPlayerIndexFromList(PlayerModel player)
+    {
+        int index = 0;
+        foreach (var item in StoredPlayers)
+        {
+            if ( item.Name.Equals(player.Name) && item.ShortName.Equals(player.ShortName) && item.Ticket == player.Ticket )
+            {
+                return index;
+            }
+
+            index += 1;
+        }
+        return 0;
     }
 
     public async Task OnSavePlayerGambleFromChecksum()

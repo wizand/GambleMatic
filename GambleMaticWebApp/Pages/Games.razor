@@ -1,4 +1,5 @@
 ﻿@page "/games"
+@using GambleMaticWebApp.Data
 @inject GameDataService _gameDataService
 <PageTitle>Games</PageTitle>
 
@@ -75,18 +76,118 @@
     </Table>
 </Div>
 
+<Div id="extraGambles">
+    <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHeaderCell>Semi final team 1:</TableHeaderCell>
+                <TableHeaderCell>Semi final team 2:</TableHeaderCell>
+                <TableHeaderCell>Semi final team 3:</TableHeaderCell>
+                <TableHeaderCell>Semi final team 4:</TableHeaderCell>
+                <TableHeaderCell>Gold medal team:</TableHeaderCell>
+                <TableHeaderCell>Silver medal team:</TableHeaderCell>
+                <TableHeaderCell>Goals in tournament:</TableHeaderCell>
+            </TableRow>
+            <TableRow>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesResultViewModel.SemiFinalTeam1">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesResultViewModel.SemiFinalTeam2">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesResultViewModel.SemiFinalTeam3">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesResultViewModel.SemiFinalTeam4">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesResultViewModel.SilverMedalTeam">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesResultViewModel.GoldMedalTeam">
+                        @foreach (var team in TeamsList)
+                        {
+                            <SelectItem Value="@team">@team</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+                <TableRowCell>
+                    <Select TValue="string" @bind-SelectedValue="@extraGamblesResultViewModel.GoalAmount">
+                        @foreach (var goals in GoalAmountOptions)
+                        {
+                            <SelectItem Value="@goals">@goals</SelectItem>
+                        }
+                    </Select>
+                </TableRowCell>
+            </TableRow>
+        </TableHeader>
+    </Table>
+    <Button Color="Color.Success" onclick="@OnSaveExtraGambleResults">Save extra gambles results!</Button>
+</Div>
+
 
 
 @code {
 
-    //DatePicker<DateTime?> datePicker;
-    //string Today = "";
+    public List<string> TeamsList
+    {
+        get
+        {
+            if (_gameDataService.AllTeams == null)
+            {
+                _gameDataService.RefreshTeamsCacheFromList(StoredGames);
+            }
+            return _gameDataService.AllTeams;
+        }
+    }
+
+    public List<string> GoalAmountOptions
+    {
+        get
+        {
+            return _gameDataService.GoalAmountOptions;
+        }
+    }
 
 
+    public async void OnSaveExtraGambleResults() 
+    {
+        int count = await _gameDataService.SaveExtraGamblesResultModel(extraGamblesResultViewModel.GetExtraGambleModel());
+    }
+
+    ExtraGamblesViewModel extraGamblesResultViewModel { get; set; } = new();
     List<GameModelViewModel> StoredGames = new();
     NewGameViewModel newGameModel = new();
     protected override async Task OnInitializedAsync()
     {
+        ExtraGamblesModel extraGambleModel = await _gameDataService.GetExtraGamblesResultModel();
+        extraGamblesResultViewModel = new(extraGambleModel);
         //Today = DateTime.UtcNow.ToString("d");
         await RefreshGamesList();
     }

@@ -1,7 +1,10 @@
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel.DataAnnotations;
 
 using GambleMaticDataLib;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Update.Internal;
 
 public class GameDataService
@@ -73,6 +76,53 @@ public class GameDataService
         return list;
     }
 
+    public async Task<List<GambleItemModel>> GetGambleItemsFromDatabaseAsync()
+    {
+        var list = await DbManager.GetGambleItemsFromDatabaseAsync();
+        if (list == null)
+        {
+            list = new List<GambleItemModel>();
+        }
+
+        return list;
+    }
+
+
+    public async Task<ExtraGamblesModel> GetExtraGamblesResultModel()
+    {
+        var list = await DbManager.GetExtraGamblesResultModelFromDatabase();
+        ExtraGamblesModel? extraGamblesModel = null;
+
+        if (list.Count == 0)
+        {
+            extraGamblesModel = new();
+            extraGamblesModel.IsResultObject = true;
+            extraGamblesModel.SemifinalTeamOne = "na";
+            extraGamblesModel.SemifinalTeamTwo = "na";
+            extraGamblesModel.SemifinalTeamThree = "na";
+            extraGamblesModel.SemifinalTeamFour = "na";
+            extraGamblesModel.SilverTeam = "na";
+            extraGamblesModel.GoldTeam = "na";
+            Console.WriteLine("No result model. Creating one."); 
+            await DbManager.SaveExtraGamblesResultModel(extraGamblesModel);
+        }
+        else
+        {
+            if (list.Count > 1)
+            {
+                Console.WriteLine("TOO MANY EXTRA GAMBLES RESULT MODELS!");
+            }
+            extraGamblesModel = list.First();
+        }
+        return extraGamblesModel;
+    }
+
+    public async Task<int> SaveExtraGamblesResultModel(ExtraGamblesModel resultModel)
+    {
+        int count = await DbManager.SaveExtraGamblesResultModel(resultModel);
+        return count;
+    }
+
 
     public async Task<int> RemoveExistingGamblesForPlayer(int playerId)
     {
@@ -111,7 +161,7 @@ public class GameDataService
     }
 
 
-
+    public static string NOT_SELECTED_IDENTIFIER = "-";
     public async void RefreshTeamsCacheFromDb()
     {
         var gameModels = await GetGameModelsFromDatabaseAsync();
@@ -141,6 +191,7 @@ public class GameDataService
                 _teamsCache.Add(gameModel.Away);
             }
         }
+        _teamsCache.Add(NOT_SELECTED_IDENTIFIER);
         _teamsCache.Sort();
     }
 
@@ -177,6 +228,8 @@ public class GameDataService
     private List<string> generateGoalAmounts(int min, int max, int step)
     {
         List<string> goalAmountOptions = new List<string>();
+
+        goalAmountOptions.Add(NOT_SELECTED_IDENTIFIER);
 
         bool write = false;
         string tmp = "";

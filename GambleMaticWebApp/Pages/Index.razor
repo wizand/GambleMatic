@@ -1,13 +1,23 @@
 ﻿@page "/"
+@using GambleMaticWebApp.Data
+@using System.Text
 @inject GameDataService _gameDataService
 <PageTitle>Gamble matic statistics</PageTitle>
 
 <h1>Player points</h1>
 
+
+@if (StoredGames == null || StoredPlayers == null) 
+{
+    <p>Loading..</p>
+} else {
+
+
 <Table Striped Hoverable>
     <TableHeader>
         <TableRow>
             <TableHeaderCell>Player</TableHeaderCell>
+            <TableHeaderCell>Gamble row</TableHeaderCell>
             <TableHeaderCell>Points</TableHeaderCell>
         </TableRow>
     </TableHeader>
@@ -15,33 +25,310 @@
         @{
             foreach(var player in StoredPlayers) 
             {
-            <TableRow>
-                <TableRowCell>@player.ShortName</TableRowCell>
-                <TableRowCell>@mapPointsPerPlayer[player]</TableRowCell>
-            </TableRow>
+                            <TableRow>
+                                <TableRowCell>@player.ShortName</TableRowCell>
+                                <TableRowCell>
+                                    @getChecksumNicelyFormatted(mapGambleChecksumPerPlayer[player])
+                                </TableRowCell>
+                                <TableRowCell>@mapPointsPerPlayerFromGroupStage[player]</TableRowCell>
+                            </TableRow>
             }
         }
     </TableBody>
+</Table>
 
+
+<Table Striped Hoverable>
+    <TableHeader>
+        <TableRow>
+            <TableHeaderCell>Player</TableHeaderCell>
+            
+            @{
+                foreach(var player in StoredPlayers) 
+                {
+                                <TableHeaderCell Style="text-align: center;">@player.ShortName</TableHeaderCell>
+                }
+            }
+        </TableRow>
+            <TableRow>
+                <TableHeaderCell>POINTS:</TableHeaderCell>
+                @foreach (var player in StoredPlayers)
+                {
+
+                    <TableHeaderCell Style="@getStyleForGroupStagePoints(player)">@mapPointsPerPlayerFromGroupStage[player]</TableHeaderCell>
+                }
+            </TableRow>
+    </TableHeader>
+    <TableBody>
+        @{ 
+                
+            foreach (var game in StoredGames)
+            {
+                
+                                <TableRow>                        
+                                    <TableRowCell>@game.MatchTitle</TableRowCell>
+                                    @foreach(var player in StoredPlayers)
+                        {
+                                        <TableRowCell Style="@getStyleForPlayerGuess(game, player)">@getPlayerGuessForTheGame(game, player)</TableRowCell>
+                        }
+                                </TableRow>
+            }
+           
+            
+        }
+    </TableBody>
 </Table>
 
 
 
+<Table>
+    <TableBody>
+        <TableRow>
+            <TableRowCell>
+                <Table Striped Hoverable>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell>Game</TableHeaderCell>
+                            <TableHeaderCell>Home %</TableHeaderCell>
+                            <TableHeaderCell>Draw %</TableHeaderCell>
+                            <TableHeaderCell>Away %</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        @{
+                            for (int i = 0; i < singleGameStatisticsViewModels.Count/2; i++)
+                            {
+                                var singleGameStats = singleGameStatisticsViewModels[i];
+                                                <TableRow>
+                                                    <TableRowCell>@singleGameStats.Game.MatchTitle</TableRowCell>
+                                                    <TableRowCell Style="@singleGameStats.HslColorPerc(singleGameStats.HomeGuessesPercent, 29, 72)">@singleGameStats.HomeGuessPercentStr</TableRowCell>
+                                                    <TableRowCell Style="@singleGameStats.HslColorPerc(singleGameStats.DrawGuessesPercent, 29, 72)">@singleGameStats.DrawGuessesPercentStr</TableRowCell>
+                                                    <TableRowCell Style="@singleGameStats.HslColorPerc(singleGameStats.AwayGuessesPercent, 29, 72)">@singleGameStats.AwayGuessesPercentStr</TableRowCell>
+                                    
+                                                </TableRow>
+                            }
+                        }
+                    </TableBody>
+                </Table>
+            </TableRowCell>
+            <TableRowCell>
+                <Table Striped Hoverable>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell>Game</TableHeaderCell>
+                            <TableHeaderCell>Home %</TableHeaderCell>
+                            <TableHeaderCell>Draw %</TableHeaderCell>
+                            <TableHeaderCell>Away %</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        @{
+                            for (int i = singleGameStatisticsViewModels.Count / 2; i < singleGameStatisticsViewModels.Count; i++)
+                            {
+                                var singleGameStats = singleGameStatisticsViewModels[i];
+                                                <TableRow>
+                                                    <TableRowCell>@singleGameStats.Game.MatchTitle</TableRowCell>
+                                                    <TableRowCell Style="@singleGameStats.HslColorPerc(singleGameStats.HomeGuessesPercent, 29, 72)">@singleGameStats.HomeGuessPercentStr</TableRowCell>
+                                                    <TableRowCell Style="@singleGameStats.HslColorPerc(singleGameStats.DrawGuessesPercent, 29, 72)">@singleGameStats.DrawGuessesPercentStr</TableRowCell>
+                                                    <TableRowCell Style="@singleGameStats.HslColorPerc(singleGameStats.AwayGuessesPercent, 29, 72)">@singleGameStats.AwayGuessesPercentStr</TableRowCell>
 
+                                                </TableRow>
+                            }
+                        }
+                    </TableBody>
+                </Table>
+            </TableRowCell>
+        </TableRow>
+    </TableBody>
+</Table>
+
+
+
+    @if ( extraGamblesResults != null) {
+        <h2>RESULTS:</h2>
+        <Table Striped Hoverable>
+      
+            <TableHeader>
+                    <TableRow>
+                        <TableHeaderCell>Semifinal team</TableHeaderCell>
+                        <TableHeaderCell>Semifinal team</TableHeaderCell>
+                        <TableHeaderCell>Semifinal team</TableHeaderCell>
+                        <TableHeaderCell>Semifinal team</TableHeaderCell>
+                        <TableHeaderCell>Gold team</TableHeaderCell>
+                        <TableHeaderCell>Silver team</TableHeaderCell>
+                        <TableHeaderCell>Goal amount</TableHeaderCell>
+                    </TableRow>
+            </TableHeader>
+            <TableBody>
+                    <TableRowCell>@extraGamblesResults.SemiFinalTeam1</TableRowCell>
+                    <TableRowCell>@extraGamblesResults.SemiFinalTeam2</TableRowCell>
+                    <TableRowCell>@extraGamblesResults.SemiFinalTeam3</TableRowCell>
+                    <TableRowCell>@extraGamblesResults.SemiFinalTeam4</TableRowCell>
+                    <TableRowCell>@extraGamblesResults.SilverMedalTeam</TableRowCell>
+                    <TableRowCell>@extraGamblesResults.GoldMedalTeam</TableRowCell>
+                    <TableRowCell>@extraGamblesResults.GoalAmount</TableRowCell>
+                </TableBody>
+
+        </Table>
+    } 
+    else 
+    { 
+        <p>Loading extra gamble results..</p>
+    }
+
+    @if (mapPlayerSemifinalPredictions != null && mapPlayerSemifinalPredictions.Count > 0)
+    {
+
+        <Table Striped Hoverable>
+
+            <TableHeader>
+                <TableRow>
+                    <TableHeaderCell>Player</TableHeaderCell>
+                    <TableHeaderCell>Points from group stage</TableHeaderCell>
+                    <TableHeaderCell>Points from semifinal predictions</TableHeaderCell>
+                    <TableHeaderCell>Points from finals teams prediction</TableHeaderCell>
+                    <TableHeaderCell>Points total</TableHeaderCell>
+                    <TableHeaderCell>Semifinal team</TableHeaderCell>
+                    <TableHeaderCell>Semifinal team</TableHeaderCell>
+                    <TableHeaderCell>Semifinal team</TableHeaderCell>
+                    <TableHeaderCell>Semifinal team</TableHeaderCell>
+                    <TableHeaderCell Style="text-align: center;">Final teams</TableHeaderCell>
+                    <TableHeaderCell>Gold team</TableHeaderCell>
+                    <TableHeaderCell>Silver team</TableHeaderCell>
+                    <TableHeaderCell>Goal amount</TableHeaderCell>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                @foreach(var player in StoredPlayers)
+                {
+                <TableRow>
+                    <TableRowCell>@player.ShortName</TableRowCell>
+                    <TableRowCell Style="@getStyleForGroupStagePoints(player)">@mapPointsPerPlayerFromGroupStage[player]</TableRowCell>
+                    <TableRowCell Style="@getStyleForSemiStagePoints(player)">@mapPointsPerPlayerFromSemiStage[player]</TableRowCell>
+                    <TableRowCell Style="@getStyleForFinalStagePoints(player)">@mapPointsPerPlayerFromFinalStage[player]</TableRowCell>
+                    <TableRowCell Style="@getStyleForTotalPoints(player)">@mapPointsPerPlayerTotal[player]</TableRowCell>
+                    <TableRowCell Style="@getStyleForSemifinalTeamGuess(player, 0)">@mapPlayerSemifinalPredictions[player][0]</TableRowCell>
+                    <TableRowCell Style="@getStyleForSemifinalTeamGuess(player, 1)">@mapPlayerSemifinalPredictions[player][1]</TableRowCell>
+                    <TableRowCell Style="@getStyleForSemifinalTeamGuess(player, 2)">@mapPlayerSemifinalPredictions[player][2]</TableRowCell>
+                    <TableRowCell Style="@getStyleForSemifinalTeamGuess(player, 3)">@mapPlayerSemifinalPredictions[player][3]</TableRowCell>
+                        <TableRowCell Style="text-align: center;"><Span Style="@getStyleForFinalTeamGuess(player, 0)">@mapPlayerFinalPredictions[player][0]</Span> vs <Span Style="@getStyleForFinalTeamGuess(player, 1)">@mapPlayerFinalPredictions[player][1]</Span></TableRowCell>
+                    <TableRowCell Style="@getStyleForSilverTeam(player)">@player.GetPlayerModel().ExtraGambles.SilverTeam</TableRowCell>
+                    <TableRowCell Style="@getStyleForGoldTeam(player)">@player.GetPlayerModel().ExtraGambles.GoldTeam</TableRowCell>
+                    <TableRowCell>@player.GetPlayerModel().ExtraGambles.GoalsInTournament</TableRowCell>
+                </TableRow>
+                }
+            </TableBody>
+
+        </Table>
+    }
+    else
+    {
+        <p>Loading player semi results..</p>
+    }
+}
 
 @code
 {
     List<PlayerModelViewModel> StoredPlayers;
     List<GameModelViewModel> StoredGames;
-    Dictionary<PlayerModelViewModel, int> mapPointsPerPlayer = new();
+    List<GambleItemModel> gambleItems;
+
+    Dictionary<PlayerModelViewModel, int> mapPointsPerPlayerFromGroupStage = new();
+    Dictionary<PlayerModelViewModel, int> mapPointsPerPlayerFromSemiStage = new();
+    Dictionary<PlayerModelViewModel, int> mapPointsPerPlayerFromFinalStage = new();
+    Dictionary<PlayerModelViewModel, int> mapPointsPerPlayerTotal = new();
+    Dictionary<PlayerModelViewModel, List<GameAndPredictionViewModel>> mapGamblerowPerPlayer = new ();
+    Dictionary<PlayerModelViewModel, string> mapGambleChecksumPerPlayer = new();
+
+    Dictionary<PlayerModelViewModel, List<string>> mapPlayerSemifinalPredictions = new();
+    Dictionary<PlayerModelViewModel, List<string>> mapPlayerFinalPredictions = new();
+
+    ExtraGamblesViewModel extraGamblesResults = new(); 
+
+    List<SingleGameStatisticsViewModel> singleGameStatisticsViewModels = new();
+
+    public List<string> TeamsList
+    {
+        get
+        {
+            if (_gameDataService.AllTeams == null)
+            {
+                _gameDataService.RefreshTeamsCacheFromList(StoredGames);
+            }
+            return _gameDataService.AllTeams;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        var egResults = await _gameDataService.GetExtraGamblesResultModel();
+        extraGamblesResults = new(egResults);
         await RefreshPlayers();
         await RefreshGames();
-
+        RefreshGamesAndPredictionsPerPlayer();
+        PopulateSemifinalPredictions();
+        PopulateFinalPredictions();
         await RefreshPointsPerPlayers();
+        await RefreshGambleItems();
 
+
+
+        singleGameStatisticsViewModels = new();
+        List<GambleItemViewModel> gambleViewModels = new();
+        foreach (var gi in gambleItems)
+        {
+            GambleItemViewModel gambleViewModel = new(gi);
+            gambleViewModels.Add(gambleViewModel);
+        }
+
+        foreach (var game in StoredGames)
+        {
+            singleGameStatisticsViewModels.Add(new SingleGameStatisticsViewModel(game, gambleViewModels));
+        }
+    }
+
+    public void PopulateSemifinalPredictions()
+    {
+        mapPlayerSemifinalPredictions = new();
+        foreach (var player in StoredPlayers)
+        {
+            var extraGambles = player.GetPlayerModel().ExtraGambles;
+            mapPlayerSemifinalPredictions[player] = extraGambles.GetSemiFinalTeamsAsList();
+        }
+    }
+    public void PopulateFinalPredictions()
+    {
+        mapPlayerFinalPredictions = new();
+        foreach (var player in StoredPlayers)
+        {
+            var extraGambles = player.GetPlayerModel().ExtraGambles;
+            mapPlayerFinalPredictions[player] = extraGambles.GetFinalTeamsAsList();
+        }
+    }
+
+    public string getStyleForSemifinalTeamGuess(PlayerModelViewModel player, int semiIndex) 
+    {
+        string playerSemifinalTeamPredFromIndex = mapPlayerSemifinalPredictions[player][semiIndex];
+        if (isSemiFinalTeam(playerSemifinalTeamPredFromIndex))
+        {
+            return "background-color: green;";
+        }
+
+        return "background-color: yellow;";
+    }
+
+    public bool isSemiFinalTeam(string teamName) 
+    {
+        if (extraGamblesResults.SemiFinalTeam1.Equals(teamName) || extraGamblesResults.SemiFinalTeam2.Equals(teamName) ||
+            extraGamblesResults.SemiFinalTeam3.Equals(teamName) || extraGamblesResults.SemiFinalTeam4.Equals(teamName) )
+            return true;
+
+        return false;
+    }
+
+    public async Task RefreshGambleItems()
+    { 
+        gambleItems = await _gameDataService.GetGambleItemsFromDatabaseAsync();
     }
 
 
@@ -67,7 +354,7 @@
         }
     }
 
-    public int GetPlayerPoints(PlayerModelViewModel pmvm)
+    public int GetPlayerPointsFromGroupStage(PlayerModelViewModel pmvm)
     {
         int playerPoints = 0;
         var pm = pmvm.GetPlayerModel();
@@ -81,19 +368,266 @@
         return playerPoints;
     }
 
+    public int GetPlayerPointsFromSemiStage(PlayerModelViewModel player) 
+    {
+        int playerPointsFromSemiPredictions = 0;
+        ExtraGamblesModel playerExtraGambles = player.GetPlayerModel().ExtraGambles;
+        foreach (string team in playerExtraGambles.GetSemiFinalTeamsAsList())
+        {
+            if (isSemiFinalTeam(team) == true)
+            {
+                playerPointsFromSemiPredictions += 1;
+            }
+        }
+
+        return playerPointsFromSemiPredictions;
+    }
+
+    public int GetPlayerPointsFromGuessingFinalTeams(PlayerModelViewModel player)
+    { 
+        int correct = 0;
+        ExtraGamblesModel playerExtraGambles = player.GetPlayerModel().ExtraGambles;
+        foreach (string team in playerExtraGambles.GetFinalTeamsAsList() )
+        {
+            if (team.Equals(extraGamblesResults.GoldMedalTeam) || team.Equals(extraGamblesResults.SilverMedalTeam) )
+            {
+                correct += 1;
+            }
+        }
+
+        //if (correct == 2)
+        //{ 
+            return correct; 
+        //}
+
+        //return 0;
+
+    }
+
     public async Task RefreshPointsPerPlayers() 
     {
-        mapPointsPerPlayer = new();
-        int points = 0;
+        mapPointsPerPlayerFromGroupStage = new();
+        mapPointsPerPlayerFromSemiStage = new();
+        mapPointsPerPlayerFromFinalStage = new();
+        mapPointsPerPlayerTotal = new();
+        int pointsFromGroupStage = 0;
+        int pointsFromSemiStage = 0;
+        int pointsFromGuessingFinalTeams = 0;
         foreach (var pmvm in StoredPlayers)
         {
-            points = 0;
-            points = GetPlayerPoints(pmvm);
-            mapPointsPerPlayer[pmvm] = points;
+            pointsFromGroupStage = 0;
+            pointsFromGroupStage = GetPlayerPointsFromGroupStage(pmvm);
+            pointsFromSemiStage = 0;
+            pointsFromSemiStage = GetPlayerPointsFromSemiStage(pmvm);
+            pointsFromGuessingFinalTeams = 0;
+            pointsFromGuessingFinalTeams = GetPlayerPointsFromGuessingFinalTeams(pmvm);
+            mapPointsPerPlayerFromGroupStage[pmvm] = pointsFromGroupStage;
+            mapPointsPerPlayerFromSemiStage[pmvm] = pointsFromSemiStage;
+            mapPointsPerPlayerFromFinalStage[pmvm] = pointsFromGuessingFinalTeams;
+            mapPointsPerPlayerTotal[pmvm] = mapPointsPerPlayerFromGroupStage[pmvm] + mapPointsPerPlayerFromSemiStage[pmvm] + mapPointsPerPlayerFromFinalStage[pmvm];
+        }
+    }
+
+    public void RefreshGamesAndPredictionsPerPlayer() 
+    {
+        mapGamblerowPerPlayer = new();
+        mapGambleChecksumPerPlayer = new();
+
+        foreach (var playerViewModel in StoredPlayers)
+        {
+            List<GambleItemModel>? gambleItemModelsForPlayer = playerViewModel.GetPlayerModel().GambleItemModels;
+            if (gambleItemModelsForPlayer == null || gambleItemModelsForPlayer.Count != StoredGames.Count)
+            {
+                mapGambleChecksumPerPlayer[playerViewModel] = "N/A";
+                continue;
+            }
+
+            StringBuilder sb = new();
+            foreach (var gim in gambleItemModelsForPlayer)
+            {  
+                switch (gim.Guess)
+                {
+                    case -1:
+                        sb.Append("H");
+                        break;
+                    case 0:
+                        sb.Append("D");
+                        break;
+                    case 1:
+                        sb.Append("A");
+                        break;
+                }
+            }
+            mapGambleChecksumPerPlayer[playerViewModel] = sb.ToString();
         }
     }
 
 
+    public string getPlayerGuessForTheGame(GameModelViewModel game, PlayerModelViewModel player)
+    {
+        if ( game.ResultStr == null || game.ResultInt < -1 || game.ResultInt > 1)
+        {
+            return "*";
+        }
+
+        int pos = StoredGames.IndexOf(game);
+        return mapGambleChecksumPerPlayer[player][pos].ToString();
+    }
+
+    public string getStyleForPlayerGuess(GameModelViewModel game, PlayerModelViewModel player)
+    {
+
+        GambleItemViewModel rightGamble = null;
+        foreach ( var gamble in player.GetPlayerModel().GambleItemModels ) 
+        {
+            GambleItemViewModel givm = new GambleItemViewModel(gamble);
+            if ( game.IsGambleForGame(givm)) 
+            {
+                rightGamble = givm;
+                break;
+            }
+        }
+
+        if ( rightGamble.GambleItem.Guess == game.ResultInt)
+        {
+            return "text-align: center; color: green;";
+        }
+        return "text-align: center; color: red;";
+    }
+
+
+    public string getStyleForGroupStagePoints(PlayerModelViewModel player)
+    {
+        int highestPoints = -99;
+        foreach (var pointsForPlayer in mapPointsPerPlayerFromGroupStage.Values)
+        {
+            if (pointsForPlayer > highestPoints)
+            {
+                highestPoints = pointsForPlayer;
+            }
+        }
+
+        if (mapPointsPerPlayerFromGroupStage[player] == highestPoints)
+        {
+            return "text-align: center; text-decoration: underline blue 5px; font-size: 120%; ";
+        }
+        return "text-align: center;";
+    }
+
+    public string getStyleForSemiStagePoints(PlayerModelViewModel player)
+    {
+        int highestPoints = -99;
+        foreach (var pointsForPlayer in mapPointsPerPlayerFromSemiStage.Values)
+        {
+            if (pointsForPlayer > highestPoints)
+            {
+                highestPoints = pointsForPlayer;
+            }
+        }
+
+        if (mapPointsPerPlayerFromSemiStage[player] == highestPoints)
+        {
+            return "text-align: center; text-decoration: underline blue 5px; font-size: 120%; ";
+        }
+        return "text-align: center;";
+    }
+
+    public string getStyleForFinalStagePoints(PlayerModelViewModel player)
+    {
+        if (mapPointsPerPlayerFromFinalStage[player] == 2)
+        {
+            return "text-align: center; text-decoration: underline blue 5px; font-size: 120%; ";
+        }
+        return "text-align: center;";
+    }
+
+    public string getStyleForFinalTeamGuess(PlayerModelViewModel player, int teamIndex) 
+    {
+        if (mapPlayerFinalPredictions[player][teamIndex].Equals(extraGamblesResults.SilverMedalTeam) || mapPlayerFinalPredictions[player][teamIndex].Equals(extraGamblesResults.GoldMedalTeam))
+        {       
+            return "text-align: center; color: green;";
+        }
+        return "text-align: center; color: red;";
+    }
+
+    public string getStyleForSilverTeam(PlayerModelViewModel player)
+    {
+        if (player.GetPlayerModel().ExtraGambles.SilverTeam.Equals(extraGamblesResults.SilverMedalTeam))
+        {
+            return "text-align: center;";
+        }
+
+        if (player.GetPlayerModel().ExtraGambles.SilverTeam.Equals(extraGamblesResults.GoldMedalTeam) == false)
+        { 
+            return "text-align: center; color: red;";
+        }
+
+        return "text-align: center; ";
+    }
+
+    public string getStyleForGoldTeam(PlayerModelViewModel player)
+    {
+        if (player.GetPlayerModel().ExtraGambles.GoldTeam.Equals(extraGamblesResults.GoldMedalTeam))
+        {
+            return "text-align: center;";
+        }
+
+        if (player.GetPlayerModel().ExtraGambles.GoldTeam.Equals(extraGamblesResults.SilverMedalTeam) == false)
+        {
+            return "text-align: center; color: red;";
+        }
+
+        return "text-align: center; ";
+    }
+
+
+    public string getStyleForTotalPoints(PlayerModelViewModel player)
+    {
+        int highestPoints = -99;
+        foreach (var pointsForPlayer in mapPointsPerPlayerTotal.Values)
+        {
+            if (pointsForPlayer > highestPoints)
+            {
+                highestPoints = pointsForPlayer;
+            }
+        }
+
+        if (mapPointsPerPlayerTotal[player] == highestPoints)
+        {
+            return "text-align: center; text-decoration: underline blue 5px; font-size: 120%; ";
+        }
+        return "text-align: center;";
+    }
+
+    public string getChecksumNicelyFormatted(string checksumRow)
+    {
+        int gameresults = 0;
+        foreach (var game in StoredGames)
+        {
+            if (game.ResultInt == null || game.ResultInt < -1 || game.ResultInt > 1)
+            {
+                continue;
+            }
+            gameresults += 1;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0, spacer = 1; i < checksumRow.Length; i++, spacer++)
+        {
+            if (i == gameresults) 
+            {
+                sb.Append("|");
+            }
+
+            sb.Append(checksumRow[i]);
+            
+            if (spacer % 4 == 0)
+            {
+                spacer = 0;
+                sb.Append(" ");
+            }
+        }
+        return sb.ToString();
+    }
 }
 
 

@@ -24,6 +24,27 @@ namespace GambleMaticDataLib
 
         }
 
+        public async Task<List<ExtraGamblesModel>> GetExtraGamblesResultModelFromDatabase()
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+            var res = await gambleMaticContext.ExtraGambles.FromSqlRaw("SELECT * from ExtraGambles WHERE IsResultObject = 1").ToListAsync();
+            
+            return res;
+        }
+
+        public async Task<int> SaveExtraGamblesResultModel(ExtraGamblesModel resultModel)
+        {
+            if (resultModel.IsResultObject == false)
+            {
+                Console.WriteLine("Model is not result object. Cancelling..");
+                return 0;
+            }
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+            gambleMaticContext.ExtraGambles.Update(resultModel);
+            int savedOrUpdated = await gambleMaticContext.SaveChangesAsync();
+            return savedOrUpdated;
+        }
+
         public async Task<List<GameModel>> GetAllGamesFromDatabase()
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
@@ -36,6 +57,13 @@ namespace GambleMaticDataLib
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
             var res = await gambleMaticContext.Players.Include(p => p.ExtraGambles).Include(p=>p.GambleItemModels).ThenInclude(g=>g.GameModel).ToListAsync();
+            return res;
+        }
+
+        public async Task<List<GambleItemModel>> GetGambleItemsFromDatabaseAsync()
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+            var res = await gambleMaticContext.Gambles.Include(g => g.GameModel).Include(g => g.PlayerModel).ToListAsync();
             return res;
         }
 

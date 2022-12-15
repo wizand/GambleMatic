@@ -28,9 +28,28 @@ public class ExtraGamblesModel
     [MaxLength(16)]
     public string GoalsInTournament { get; set; }
 
-    public int PlayerModelId { get; set; }
-    public PlayerModel PlayerModel { get; set; }
+    public int? PlayerModelId { get; set; }
+    public PlayerModel? PlayerModel { get; set; }
 
+    public bool IsResultObject { get; set; } = false;
 
+    public List<string> GetSemiFinalTeamsAsList() 
+    {
+        List<string> teams = new();
+        teams.Add(SemifinalTeamOne);
+        teams.Add(SemifinalTeamTwo);
+        teams.Add(SemifinalTeamThree);
+        teams.Add(SemifinalTeamFour);
+        return teams;
+
+    }
+
+    public List<string> GetFinalTeamsAsList()
+    {
+        List<string> teams = new();
+        teams.Add(SilverTeam);
+        teams.Add(GoldTeam);
+        return teams;
+    }
 }
 

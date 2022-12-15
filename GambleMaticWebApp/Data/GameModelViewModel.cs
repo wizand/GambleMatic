@@ -1,5 +1,7 @@
 using System.Text;
 
+using GambleMaticWebApp.Data;
+
 public class GameModelViewModel
 {
     public GameModelViewModel()
@@ -99,5 +101,19 @@ public class GameModelViewModel
     internal GameModel GetGameModel()
     {
         return _gameModel;
+    }
+
+    internal bool IsGambleForGame(GambleItemViewModel gambleitem)
+    {
+        var gameModel = gambleitem.GambleItem.GameModel;
+        if ( gameModel != null)
+        {
+            if (gameModel.Home.Equals(this.Home) && gameModel.Away.Equals(this.Away) && gameModel.GameDay.Equals(this.GameDay))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
