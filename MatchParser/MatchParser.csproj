@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="countryCodes.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="group_stage_matches.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

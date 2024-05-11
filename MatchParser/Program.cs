@@ -6,6 +6,8 @@ using System.Text;
 Console.WriteLine("Hello, World!");
 
 
+FlagFetcher ff = new();
+
 string[] filenames = File.ReadAllLines("group_stage_matches.txt");
 List<List<string>> allGameDataBlocks = new();
 
@@ -43,6 +45,12 @@ string json = System.Text.Json.JsonSerializer.Serialize(allGameData);
 
 File.WriteAllText( "games.json", json);
 
+foreach( var country in AllCountriesContainer.CountriesInTournament)
+{
+    //ff.SaveFlagForCountry(country);
+    ff.GetFlagForCountry(country).GetAwaiter().GetResult();
+}
+
 
 
 
@@ -74,8 +82,7 @@ KeyValuePair<DateTime, List<Game>> handleDaysGameData(List<string> daysGameData)
 
 DateTime parseDate(string rawDateString)
 {
-    //string[] DAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-
+    
     string[] dateParts = rawDateString.Split(" ");
 
     DateTime date = new DateTime(2024, 6, int.Parse( dateParts[2]));
@@ -119,7 +126,7 @@ public class Country
     public Country(string countryName)
     {
         Name = countryName;
-        Flag = countryName + "_flag.png";
+        Flag = countryName + "_flag.svg";
     }   
     public string Name { get;set;}
     public string Flag { get;set;}
