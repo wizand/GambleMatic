@@ -1,0 +1,157 @@
+﻿@page "/gambleEvents"
+@using GambleMaticWebApp.Data
+@inject GameDataService _gameDataService
+<PageTitle>Gamble events</PageTitle>
+
+<h1>Gamble events management page</h1>
+
+<Div id="Insert sporting event">
+    <Table Striped Hoverable Bordered>
+        <TableRow>
+            <TableRowCell>Begin date</TableRowCell>
+            <TableRowCell>
+                <div class="input-group date" data-provide="datepicker">
+                    <input type="date" class="form-control" @bind="newGamblingEvent.BeginDate">
+                    <div class="input-group-addon">
+                        <span class="glyphicon glyphicon-th"></span>
+                    </div>
+                </div>
+            </TableRowCell>
+        </TableRow>
+        <TableRow>
+            <TableRowCell>End date</TableRowCell>
+            <TableRowCell>
+                <div class="input-group date" data-provide="datepicker">
+                    <input type="date" class="form-control" @bind="newGamblingEvent.EndDate">
+                    <div class="input-group-addon">
+                        <span class="glyphicon glyphicon-th"></span>
+                    </div>
+                </div>
+            </TableRowCell>
+        </TableRow>
+        <TableRow>
+            <TableRowCell>Home</TableRowCell>
+            <TableRowCell>
+                <TextEdit @bind-Text="@newGamblingEvent.EventName" Placeholder="Sporting event name" />
+            </TableRowCell>
+        </TableRow>
+    </Table>
+    <Button Color="Color.Success" onclick="@AddNewSportingEventAsync">Save sporting event</Button>
+
+</Div>
+
+<Div id="GamblingEventsList">
+    <h2>Games in database:</h2>
+    <Button Color="Color.Primary" Clicked="@UpdateGameResults">Update all results</Button>
+    <Table Striped Hoverable Bordered>
+        <TableHeader>
+            <TableRow>
+                <TableHeaderCell>Date</TableHeaderCell>
+                <TableHeaderCell>HOME</TableHeaderCell>
+                <TableHeaderCell>AWAY</TableHeaderCell>
+                <TableHeaderCell>RESULT</TableHeaderCell>
+                <TableHeaderCell>NEW RESULT</TableHeaderCell>
+                <TableHeaderCell>Update</TableHeaderCell>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+    @{
+        foreach (var game in @StoredGames)
+        {
+            <TableRow>
+                <TableRowCell>@game.GameDayStr</TableRowCell>
+                <TableRowCell>@game.Home</TableRowCell>
+                <TableRowCell>@game.Away</TableRowCell>
+                <TableRowCell>@game.ResultStr</TableRowCell>
+                <TableRowCell>
+                    <RadioGroup TValue="int" Name="Game result" @bind-CheckedValue="@game.ResultInt" Buttons>
+                        <Radio Value="-99">NO RESULT</Radio>
+                        <Radio Value="-1">HOME</Radio>
+                        <Radio Value="0">DRAW</Radio>
+                        <Radio Value="1">AWAY</Radio>
+                    </RadioGroup>
+                </TableRowCell>
+                <TableRowCell>
+                    <Button Color="Color.Primary" Clicked="@((p) => UpdateGameResult(@game))">Update result</Button>
+                </TableRowCell>
+            </TableRow>
+        }
+    }
+        </TableBody>
+    </Table>
+</Div>
+
+
+@code 
+{
+
+
+    List<GamblingEvent> StoredGamblingEvents = new();
+    NewGamblingEventViewModel newGamblingEvent = new();
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        //Today = DateTime.UtcNow.ToString("d");
+        await RefreshGamblingEventsList();
+    }
+
+    public async Task AddNewGamblingEventAsync()
+    {
+        if (String.IsNullOrWhiteSpace(newGamblingEvent.EventName) ||
+             newGamblingEvent.IsBeginDateValid() )
+        {
+            Console.WriteLine("Invalid sporting event object: " + newGamblingEvent.ToString());
+            return;
+        }
+
+        Console.WriteLine("Creating a new sporting event: " + newGamblingEvent.ToString());
+
+        GamblingEvent ge = new GamblingEvent(newGamblingEvent.EventName, newGamblingEvent.BeginDate, newGamblingEvent.EndDate);
+        await _gameDataService.AddGamblingEventToDatabaseAsync(ge);
+        newGamblingEvent = new();
+        await RefreshGamesList();
+
+    }
+
+
+
+
+
+
+    public async Task RefreshGamblingEventsList()
+    { 
+        var gamblingEventModels = await _gameDataService.GetGamblingEventModelsFromDatabaseAsync();
+        StoredGamblingEvents = new();
+        foreach (GamblingEvent gambleEvent in gamblingEventModels)
+        {
+            StoredGamblingEvents.Add(new GamblingEventViewModel(gambleEvent));
+        }
+    }
+
+    public class NewGamblingEventViewModel
+    {
+        public string? EventName { get; set; }
+        public DateTime BeginDate { get; set; }
+        public DateTime EndDate { get; set; }
+
+        public NewGamblingEventViewModel()
+        {
+            BeginDate = DateTime.UtcNow;
+            EndDate = DateTime.UtcNow.AddDays(1);
+        }
+        public bool IsBeginDateValid()
+        {
+            //Is begin before end?
+            return true;
+        }
+
+        public override string ToString()
+        {
+            return $"NewSportingEventViewModel=[EventName={EventName} BeginDate={BeginDate.ToString()} EndDate={EndDate.ToString()} ]";
+        }
+    }
+
+}
