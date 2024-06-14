@@ -21,7 +21,7 @@ builder.Services
     .AddBootstrapProviders()
     .AddFontAwesomeIcons();
 
-builder.Services.AddSingleton<GameDataService>();
+builder.Services.AddSingleton<GamblingDataService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

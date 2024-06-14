@@ -1,11 +1,11 @@
 ﻿@page "/gambleEvents"
 @using GambleMaticWebApp.Data
-@inject GameDataService _gameDataService
+@inject GamblingDataService _gameDataService
 <PageTitle>Gamble events</PageTitle>
 
 <h1>Gamble events management page</h1>
 
-<Div id="Insert sporting event">
+<Div id="Insert gambling event">
     <Table Striped Hoverable Bordered>
         <TableRow>
             <TableRowCell>Begin date</TableRowCell>
@@ -30,51 +30,37 @@
             </TableRowCell>
         </TableRow>
         <TableRow>
-            <TableRowCell>Home</TableRowCell>
+            <TableRowCell>Tournament name</TableRowCell>
             <TableRowCell>
-                <TextEdit @bind-Text="@newGamblingEvent.EventName" Placeholder="Sporting event name" />
+                <TextEdit @bind-Text="@newGamblingEvent.EventName" Placeholder="Gambling event name" />
             </TableRowCell>
         </TableRow>
     </Table>
-    <Button Color="Color.Success" onclick="@AddNewSportingEventAsync">Save sporting event</Button>
+    <Button Color="Color.Success" onclick="@AddNewGamblingEventAsync">Save gambling event</Button>
 
 </Div>
 
 <Div id="GamblingEventsList">
-    <h2>Games in database:</h2>
-    <Button Color="Color.Primary" Clicked="@UpdateGameResults">Update all results</Button>
+    <h2>Gambling events in the database:</h2>
+   @*  <Button Color="Color.Primary" Clicked="@UpdateGameResults">Update all results</Button> *@
     <Table Striped Hoverable Bordered>
         <TableHeader>
             <TableRow>
-                <TableHeaderCell>Date</TableHeaderCell>
-                <TableHeaderCell>HOME</TableHeaderCell>
-                <TableHeaderCell>AWAY</TableHeaderCell>
-                <TableHeaderCell>RESULT</TableHeaderCell>
-                <TableHeaderCell>NEW RESULT</TableHeaderCell>
-                <TableHeaderCell>Update</TableHeaderCell>
+                <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>Begin</TableHeaderCell>
+                <TableHeaderCell>End</TableHeaderCell>
             </TableRow>
         </TableHeader>
         <TableBody>
-    @{
-        foreach (var game in @StoredGames)
+@{
+    foreach (var gamblingEvent in @StoredGamblingEvents)
         {
             <TableRow>
-                <TableRowCell>@game.GameDayStr</TableRowCell>
-                <TableRowCell>@game.Home</TableRowCell>
-                <TableRowCell>@game.Away</TableRowCell>
-                <TableRowCell>@game.ResultStr</TableRowCell>
-                <TableRowCell>
-                    <RadioGroup TValue="int" Name="Game result" @bind-CheckedValue="@game.ResultInt" Buttons>
-                        <Radio Value="-99">NO RESULT</Radio>
-                        <Radio Value="-1">HOME</Radio>
-                        <Radio Value="0">DRAW</Radio>
-                        <Radio Value="1">AWAY</Radio>
-                    </RadioGroup>
-                </TableRowCell>
-                <TableRowCell>
-                    <Button Color="Color.Primary" Clicked="@((p) => UpdateGameResult(@game))">Update result</Button>
-                </TableRowCell>
+                <TableRowCell>@gamblingEvent.EventName</TableRowCell>
+                <TableRowCell>@gamblingEvent.BeginDateStr</TableRowCell>
+                <TableRowCell>@gamblingEvent.EndDateStr</TableRowCell>
             </TableRow>
+                    // <Button Color="Color.Primary" Clicked="@((p) => UpdateGameResult(@game))">Update result</Button>
         }
     }
         </TableBody>
@@ -86,7 +72,7 @@
 {
 
 
-    List<GamblingEvent> StoredGamblingEvents = new();
+    List<GamblingEventViewModel> StoredGamblingEvents = new();
     NewGamblingEventViewModel newGamblingEvent = new();
 
 
@@ -101,7 +87,7 @@
     public async Task AddNewGamblingEventAsync()
     {
         if (String.IsNullOrWhiteSpace(newGamblingEvent.EventName) ||
-             newGamblingEvent.IsBeginDateValid() )
+             false == newGamblingEvent.IsBeginDateValid() )
         {
             Console.WriteLine("Invalid sporting event object: " + newGamblingEvent.ToString());
             return;
@@ -112,7 +98,7 @@
         GamblingEvent ge = new GamblingEvent(newGamblingEvent.EventName, newGamblingEvent.BeginDate, newGamblingEvent.EndDate);
         await _gameDataService.AddGamblingEventToDatabaseAsync(ge);
         newGamblingEvent = new();
-        await RefreshGamesList();
+        await RefreshGamblingEventsList();
 
     }
 

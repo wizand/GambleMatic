@@ -27,11 +27,13 @@ public class GamblingEvent
     [Key]
     public int GamblingEventId { get; set; }
     [Required]
+    [StringLength(255)]
     public string EventName { get; set; }
     [Required]
     public DateTime BeginDate { get; set; }
     public DateTime EndDate { get; set; }
 
     public IEnumerable<GameModel> Games { get; set; }
+    public IEnumerable<ExtraGamblesModel> ExtraGambles { get; set; }
 }
 

@@ -1,12 +1,27 @@
 ﻿@page "/games"
 @using GambleMaticWebApp.Data
-@inject GameDataService _gameDataService
+@inject GamblingDataService _gameDataService
 <PageTitle>Games</PageTitle>
 
 <h1>Games Management page</h1>
 
 <Div id="Insert game">
     <Table Striped Hoverable Bordered>
+        <TableRow>
+            <TableRowCell>Event</TableRowCell>
+            <TableRowCell>
+                <Select TValue="int" SelectedValueChanged="@OnSelectedEventChanged">
+                    @{
+                        int index = 0;
+                        foreach (var gamblingEvent in GamblingEvents)
+                        {
+                            <SelectItem Value="@index">@gamblingEvent.EventName</SelectItem>
+                            index = index + 1;
+                        }
+                    }
+                </Select>
+            </TableRowCell>
+        </TableRow>
         <TableRow>
             <TableRowCell>Date</TableRowCell>
             <TableRowCell>
@@ -183,9 +198,15 @@
 
     ExtraGamblesViewModel extraGamblesResultViewModel { get; set; } = new();
     List<GameModelViewModel> StoredGames = new();
+    List<GamblingEventViewModel> GamblingEvents = new();
+
     NewGameViewModel newGameModel = new();
+
+
     protected override async Task OnInitializedAsync()
     {
+        await RefreshGamblingEventsList();
+
         ExtraGamblesModel extraGambleModel = await _gameDataService.GetExtraGamblesResultModel();
         extraGamblesResultViewModel = new(extraGambleModel);
         //Today = DateTime.UtcNow.ToString("d");
@@ -209,6 +230,33 @@
         await RefreshGamesList();
 
     }
+
+
+    /// /////////// GAMLIBLING EVENTS //////////////////////////
+
+    public GamblingEventViewModel selectedGamblingEvent { get; set; }
+    public async Task OnSelectedEventChanged(int selectedValue)
+    {
+        Console.WriteLine("Selected event changed to: " + selectedValue);
+        await RefreshGamesList();
+    }
+
+    public async Task RefreshGamblingEventsList()
+    {
+        var gamblingEventModels = await _gameDataService.GetGamblingEventModelsFromDatabaseAsync();
+        GamblingEvents = new();
+        foreach (GamblingEvent gambleEvent in gamblingEventModels)
+        {
+            GamblingEvents.Add(new GamblingEventViewModel(gambleEvent));
+        }
+        selectedGamblingEvent = GamblingEvents[0];
+    }
+
+
+
+    
+    /// //////////////////////////////////////////////////////////
+    
 
     public async Task UpdateGameResult(GameModelViewModel gameToUpdate)
     {

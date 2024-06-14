@@ -12,6 +12,16 @@ namespace GambleMaticDataLib
 {
     public class GambleMaticDbManager
     {
+        public async Task<int> SaveGamblingEventToDatabase(GamblingEvent gamblingEvent)
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+
+            gambleMaticContext.GamblingEvents.Add(gamblingEvent);
+            int result = await gambleMaticContext.SaveChangesAsync();
+            return result;
+        }
+
+
         public async Task<int> DeleteGamblesForPlayer(int playerId)
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
@@ -74,6 +84,15 @@ namespace GambleMaticDataLib
             return gambleRows;
         }
 
+        public async Task<List<GamblingEvent>> GetGamblingEventsFromDatabase()
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+            List<GamblingEvent> gamblingEvents = await gambleMaticContext.GamblingEvents
+                .Include(ge => ge.Games)
+                .Include(ge => ge.ExtraGambles).ToListAsync();
+            return gamblingEvents;
+        }
+
         public async Task<int> SaveChangesToGame(GameModel gameModelToUpdate)
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
@@ -130,5 +149,7 @@ namespace GambleMaticDataLib
             int result = await gambleMaticContext.SaveChangesAsync();
             return result;
         }
+
+
     }
 }

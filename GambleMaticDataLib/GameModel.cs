@@ -29,6 +29,6 @@ public class GameModel
 
     public int? ResultInt { get; set; } = null;
 
-    public int GamblingEventId { get; set; }
-    public GamblingEvent GamblingEvent { get; set; }
+    public int? GamblingEventId { get; set; } = null;
+    public GamblingEvent? GamblingEvent { get; set; } = null;
 }

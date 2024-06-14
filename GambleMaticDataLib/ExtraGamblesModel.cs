@@ -51,5 +51,9 @@ public class ExtraGamblesModel
         teams.Add(GoldTeam);
         return teams;
     }
+
+    public int? GamblingEventId { get; set; } = null;
+    public GamblingEvent? GamblingEvent { get; set; } = null;
+
 }
 

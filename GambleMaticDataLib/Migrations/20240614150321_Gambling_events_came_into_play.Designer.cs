@@ -4,6 +4,7 @@ using GambleMaticDataLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GambleMaticDataLib.Migrations
 {
     [DbContext(typeof(GambleMaticContext))]
-    partial class GambleMaticContextModelSnapshot : ModelSnapshot
+    [Migration("20240614150321_Gambling_events_came_into_play")]
+    partial class Gambling_events_came_into_play
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

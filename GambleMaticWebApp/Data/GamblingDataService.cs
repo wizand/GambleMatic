@@ -7,7 +7,7 @@ using GambleMaticDataLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Update.Internal;
 
-public class GameDataService
+public class GamblingDataService
 {
 
     private GambleMaticDbManager dbManager = null;
@@ -44,6 +44,11 @@ public class GameDataService
         Console.WriteLine(result + " players saved.");
     }
 
+    public async Task AddGamblingEventToDatabaseAsync(GamblingEvent gamblingEvent)
+    {
+        int result = await DbManager.SaveGamblingEventToDatabase(gamblingEvent);
+        Console.WriteLine(result + " gambling events saved.");
+    }
 
 
     public async Task<List<GameModel>> GetGameModelsFromDatabaseAsync()
@@ -87,6 +92,16 @@ public class GameDataService
         return list;
     }
 
+
+    public async Task<List<GamblingEvent>> GetGamblingEventModelsFromDatabaseAsync()
+    {
+        var list = await DbManager.GetGamblingEventsFromDatabase();
+        if (list == null)
+        {
+            list = new();
+        }
+        return list;
+    }
 
     public async Task<ExtraGamblesModel> GetExtraGamblesResultModel()
     {

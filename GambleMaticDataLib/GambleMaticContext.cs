@@ -31,19 +31,30 @@ namespace GambleMaticDataLib
         {
 
 
-            modelBuilder.Entity<PlayerModel>().HasMany<GambleItemModel>(g => g.GambleItemModels)
-                    .WithOne(e => e.PlayerModel);
-            modelBuilder.Entity<GambleItemModel>().HasOne<PlayerModel>(gi => gi.PlayerModel)
+            modelBuilder.Entity<PlayerModel>()
+                .HasMany<GambleItemModel>(g => g.GambleItemModels)
+                .WithOne(e => e.PlayerModel);
+            modelBuilder.Entity<GambleItemModel>()
+                .HasOne<PlayerModel>(gi => gi.PlayerModel)
                 .WithMany(pm => pm.GambleItemModels)
                 .HasForeignKey(gim => gim.PlayerModelId);
 
             modelBuilder.Entity<PlayerModel>().HasOne<ExtraGamblesModel>(pm => pm.ExtraGambles).WithOne(eg => eg.PlayerModel);
-            modelBuilder.Entity<ExtraGamblesModel>().HasOne<PlayerModel>(egm => egm.PlayerModel).WithOne(pm => pm.ExtraGambles);
+            modelBuilder.Entity<ExtraGamblesModel>()
+                .HasOne<PlayerModel>(egm => egm.PlayerModel)
+                .WithOne(pm => pm.ExtraGambles);
 
             modelBuilder.Entity<GambleItemModel>()
                 .HasOne<GameModel>(gim => gim.GameModel)
                 .WithMany()
                 .HasForeignKey(g => g.GameModelId);
+
+            modelBuilder.Entity<GamblingEvent>()
+                .HasMany<GameModel>(ge => ge.Games)
+                .WithOne(gm => gm.GamblingEvent);
+            modelBuilder.Entity<GamblingEvent>()
+                .HasMany<ExtraGamblesModel>(ge => ge.ExtraGambles)
+                .WithOne(egm => egm.GamblingEvent);
 
             base.OnModelCreating(modelBuilder);
         }
@@ -52,6 +63,7 @@ namespace GambleMaticDataLib
         public DbSet<PlayerModel> Players { get; set; }
         public DbSet<GambleItemModel> Gambles { get; set; }
         public DbSet<ExtraGamblesModel> ExtraGambles { get; set; }
+        public DbSet<GamblingEvent> GamblingEvents { get; set; }
 
     }
 }

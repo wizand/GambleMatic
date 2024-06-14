@@ -35,6 +35,21 @@
         public DateTime BeginDate { get { return _gamblingEvent.BeginDate; } set { _gamblingEvent.BeginDate = value; } }
         public DateTime EndDate { get { return _gamblingEvent.EndDate; } set { _gamblingEvent.EndDate = value; } }
 
+        public string BeginDateStr
+        {
+            get
+            {
+                return BeginDate.ToString("yyyy-MM-dd");
+            }
+        }   
+
+        public string EndDateStr
+        {
+            get
+            {
+                return EndDate.ToString("yyyy-MM-dd");
+            }
+        }
 
         public List<GameModelViewModel> GamesInEvent = new List<GameModelViewModel>();
     }
