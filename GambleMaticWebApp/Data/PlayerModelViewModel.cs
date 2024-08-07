@@ -1,5 +1,7 @@
 using System.Text;
 
+using GambleMaticWebApp.Data;
+
 public class PlayerModelViewModel
 {
     public PlayerModelViewModel()
@@ -119,5 +121,22 @@ public class PlayerModelViewModel
     internal PlayerModel GetPlayerModel()
     {
         return _playerModel;
+    }
+
+    public List<GambleItemModel> GambleItemsForEvent(GamblingEventViewModel gamblingEvent)
+    {
+        List<GambleItemModel> gamblesInEvent = new();
+        foreach ( var gameItem in gamblingEvent.GamesInEvent)
+        {
+            foreach (var gambleItemModel in GetPlayerModel().GambleItemModels)
+            {
+                if (gameItem.IsGambleForGame(gambleItemModel))
+                {
+                    gamblesInEvent.Add(gambleItemModel);
+                }
+            }
+        }
+        
+        return gamblesInEvent;
     }
 }

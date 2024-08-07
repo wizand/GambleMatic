@@ -2,17 +2,37 @@
 @using GambleMaticWebApp.Data
 @using System.Text
 @inject GamblingDataService _gameDataService
+@inject GamblingEventStateService _gamblingEventStateService
 <PageTitle>Gamble matic statistics</PageTitle>
 
 <h1>Player points</h1>
 
 
-@if (StoredGames == null || StoredPlayers == null)
+
+
+@if (selectedGamblingEvent == null || StoredGames == null || StoredPlayers == null)
 {
     <p>Loading..</p>
 }
 else
 {
+
+
+    <Div id="eventSelectionDiv" Class="row">         
+        <Div Class="td">Event:</Div>
+        <Div Class="td">
+            <Select TValue="int" SelectedValueChanged="@OnSelectedEventChanged">
+                @{
+                    int index = 0;
+                    foreach (var gamblingEvent in GamblingEventViewModels)
+                    {
+                        <SelectItem Value="@index">@gamblingEvent.EventName</SelectItem>
+                        index = index + 1;
+                    }
+                }
+            </Select>
+        </Div>
+    </Div>
 
 
     <Table Striped Hoverable>
@@ -220,10 +240,23 @@ else
                         <TableRowCell Style="@getStyleForSemifinalTeamGuess(player, 1)">@mapPlayerSemifinalPredictions[player][1]</TableRowCell>
                         <TableRowCell Style="@getStyleForSemifinalTeamGuess(player, 2)">@mapPlayerSemifinalPredictions[player][2]</TableRowCell>
                         <TableRowCell Style="@getStyleForSemifinalTeamGuess(player, 3)">@mapPlayerSemifinalPredictions[player][3]</TableRowCell>
-                        <TableRowCell Style="text-align: center;"><Span Style="@getStyleForFinalTeamGuess(player, 0)">@mapPlayerFinalPredictions[player][0]</Span> vs <Span Style="@getStyleForFinalTeamGuess(player, 1)">@mapPlayerFinalPredictions[player][1]</Span></TableRowCell>
-                        <TableRowCell Style="@getStyleForSilverTeam(player)">@player.GetPlayerModel().ExtraGambles.SilverTeam</TableRowCell>
-                        <TableRowCell Style="@getStyleForGoldTeam(player)">@player.GetPlayerModel().ExtraGambles.GoldTeam</TableRowCell>
-                        <TableRowCell Style="@getStyleForGoals(player)">@player.GetPlayerModel().ExtraGambles.GoalsInTournament</TableRowCell>
+                        @{
+                            Random r = new();
+                            int whoFirst = r.Next(2);
+                            if ( whoFirst == 0)
+                            {
+                                <TableRowCell Style="text-align: center;"><Span Style="@getStyleForFinalTeamGuess(player, 0)">@mapPlayerFinalPredictions[player][0]</Span> vs <Span Style="@getStyleForFinalTeamGuess(player, 1)">@mapPlayerFinalPredictions[player][1]</Span></TableRowCell>
+                            }
+                            else
+                            {
+                                <TableRowCell Style="text-align: center;"><Span Style="@getStyleForFinalTeamGuess(player, 1)">@mapPlayerFinalPredictions[player][1]</Span> vs <Span Style="@getStyleForFinalTeamGuess(player, 0)">@mapPlayerFinalPredictions[player][0]</Span></TableRowCell>
+                            }
+
+                        }
+                        @* <TableRowCell Style="text-align: center;"><Span Style="@getStyleForFinalTeamGuess(player, 0)">@mapPlayerFinalPredictions[player][0]</Span> vs <Span Style="@getStyleForFinalTeamGuess(player, 1)">@mapPlayerFinalPredictions[player][1]</Span></TableRowCell> *@
+                        <TableRowCell Style="@getStyleForGoldTeam(player)">@GetExtraGamblesForPlayer(player).GoldTeam</TableRowCell>
+                        <TableRowCell Style="@getStyleForSilverTeam(player)">@GetExtraGamblesForPlayer(player).SilverTeam</TableRowCell>
+                        <TableRowCell Style="@getStyleForGoals(player)">@GetExtraGamblesForPlayer(player).GoalsInTournament</TableRowCell>
                     </TableRow>
                 }
             </TableBody>
@@ -238,6 +271,46 @@ else
 
 @code
 {
+    public ExtraGamblesModel GetExtraGamblesForPlayer(PlayerModelViewModel player)
+    {
+
+
+        foreach (ExtraGamblesViewModel egvm in selectedGamblingEvent.ExtraGamblesInEvent )
+        {
+            if (egvm.IsResultModel)
+            {
+                continue;
+            }
+            if ( egvm.GetExtraGambleModel().PlayerModelId == player.GetPlayerModel().PlayerModelId)
+            {
+                return egvm.GetExtraGambleModel();
+            }
+        }
+        return new ExtraGamblesViewModel().GetExtraGambleModel();
+
+    }
+    public GamblingEventViewModel selectedGamblingEvent;
+    public List<GamblingEventViewModel> GamblingEventViewModels 
+    {
+        get 
+        {
+            return _gamblingEventStateService.GetAllGamblingEventViewModels().Result;
+        }
+    }
+
+    public async Task OnSelectedEventChanged(int selectedEventIndex) {
+        _gamblingEventStateService.SetSelectedGamblingEvent(selectedEventIndex);
+        selectedGamblingEvent = await _gamblingEventStateService.GetSelectedGamblingEventAsViewModel();
+        await RefreshExtraGambleResultModelForSelectedEvent();
+        await RefreshPlayers();
+        await RefreshGames();
+        RefreshGamesAndPredictionsPerPlayer();
+        PopulateSemifinalPredictions();
+        PopulateFinalPredictions();
+        await RefreshPointsPerPlayers();
+        await RefreshGambleItems();
+    }
+
     List<PlayerModelViewModel> StoredPlayers;
     List<GameModelViewModel> StoredGames;
     List<GambleItemModel> gambleItems;
@@ -272,8 +345,13 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var egResults = await _gameDataService.GetExtraGamblesResultModel();
-        extraGamblesResults = new(egResults);
+
+        await RefreshSelectedGamblingEvent();
+
+        //var egResults = await _gameDataService.GetExtraGamblesResultModel();
+
+        //extraGamblesResults = new(egResults);
+
         await RefreshPlayers();
         await RefreshGames();
         RefreshGamesAndPredictionsPerPlayer();
@@ -298,12 +376,34 @@ else
         }
     }
 
+
+    public async Task RefreshExtraGambleResultModelForSelectedEvent()
+    {
+        var egResults = selectedGamblingEvent.GetExtraGamblesResultModelForEvent();
+        if (egResults != null)
+        {
+            extraGamblesResults = new(egResults);
+        }
+        else
+        {
+            extraGamblesResults = new();
+        }
+    }
+
+
+    public async Task RefreshSelectedGamblingEvent() 
+    {
+        var gamblingEvent = await _gamblingEventStateService.GetSelectedGamblingEvent();
+        selectedGamblingEvent = new GamblingEventViewModel(gamblingEvent);
+        await RefreshExtraGambleResultModelForSelectedEvent();
+    }
+
     public void PopulateSemifinalPredictions()
     {
         mapPlayerSemifinalPredictions = new();
         foreach (var player in StoredPlayers)
         {
-            var extraGambles = player.GetPlayerModel().ExtraGambles;
+            var extraGambles = GetExtraGamblesForPlayer(player);
             mapPlayerSemifinalPredictions[player] = extraGambles.GetSemiFinalTeamsAsList();
         }
     }
@@ -312,7 +412,7 @@ else
         mapPlayerFinalPredictions = new();
         foreach (var player in StoredPlayers)
         {
-            var extraGambles = player.GetPlayerModel().ExtraGambles;
+            var extraGambles = GetExtraGamblesForPlayer(player);
             mapPlayerFinalPredictions[player] = extraGambles.GetFinalTeamsAsList();
         }
     }
@@ -342,33 +442,40 @@ else
         List<int> points = new();
 
         int pointsFromSilver = 0;
-        if (player.GetPlayerModel().ExtraGambles.SilverTeam.Equals(extraGamblesResults.SilverMedalTeam))
+        var extraGambpleForPlayer = GetExtraGamblesForPlayer(player);
+        if (extraGambpleForPlayer.SilverTeam.Equals(extraGamblesResults.SilverMedalTeam))
         {
             pointsFromSilver = 3;
         }
         int pointsFromGold = 0;
-        if (player.GetPlayerModel().ExtraGambles.GoldTeam.Equals(extraGamblesResults.GoldMedalTeam))
+        if (extraGambpleForPlayer.GoldTeam.Equals(extraGamblesResults.GoldMedalTeam))
         {
             pointsFromGold = 5;
         }
 
+        // points.Add(0);
+        // points.Add(0);
+        
         points.Add(pointsFromSilver);
         points.Add(pointsFromGold);
 
+        
         return points;
 
     }
 
     public async Task RefreshGambleItems()
     {
-        gambleItems = await _gameDataService.GetGambleItemsFromDatabaseAsync();
+        //gambleItems = await _gameDataService.GetGambleItemsFromDatabaseAsync();
+        gambleItems = await _gamblingEventStateService.GetAllGambleItemsForSelectedEvent();
     }
 
 
     public async Task RefreshPlayers()
     {
         StoredPlayers = new();
-        var playerModels = await _gameDataService.GetPlayerModelsFromDatabaseAsync();
+        var playerModels = selectedGamblingEvent.GamblingEvent.ParticipatingPlayers;
+        //var playerModels = await _gameDataService.GetPlayerModelsFromDatabaseAsync();
         foreach (var pm in playerModels)
         {
             PlayerModelViewModel pmv = new(pm);
@@ -379,11 +486,12 @@ else
     public async Task RefreshGames()
     {
         StoredGames = new();
-        var gameModels = await _gameDataService.GetGameModelsFromDatabaseAsync();
+        //var gameModels = await _gameDataService.GetAllGameModelsFromDatabaseAsync();
+        var gameModels = selectedGamblingEvent.GamesInEvent;
         foreach (var gm in gameModels)
         {
-            GameModelViewModel gmv = new(gm);
-            StoredGames.Add(gmv);
+            //GameModelViewModel gmv = new(gm);
+            StoredGames.Add(gm);
         }
     }
 
@@ -391,7 +499,8 @@ else
     {
         int playerPoints = 0;
         var pm = pmvm.GetPlayerModel();
-        foreach (GambleItemModel gim in pm.GambleItemModels)
+        var gambleItemsInEventForPlayer = pmvm.GambleItemsForEvent(selectedGamblingEvent);
+        foreach (GambleItemModel gim in gambleItemsInEventForPlayer)
         {
             if (gim.Guess == gim.GameModel.ResultInt)
             {
@@ -404,7 +513,7 @@ else
     public int GetPlayerPointsFromSemiStage(PlayerModelViewModel player)
     {
         int playerPointsFromSemiPredictions = 0;
-        ExtraGamblesModel playerExtraGambles = player.GetPlayerModel().ExtraGambles;
+        ExtraGamblesModel playerExtraGambles = GetExtraGamblesForPlayer(player);
         foreach (string team in playerExtraGambles.GetSemiFinalTeamsAsList())
         {
             if (isSemiFinalTeam(team) == true)
@@ -419,7 +528,7 @@ else
     public int GetPlayerPointsFromGuessingFinalTeams(PlayerModelViewModel player)
     {
         int correct = 0;
-        ExtraGamblesModel playerExtraGambles = player.GetPlayerModel().ExtraGambles;
+        ExtraGamblesModel playerExtraGambles = GetExtraGamblesForPlayer(player);
         foreach (string team in playerExtraGambles.GetFinalTeamsAsList())
         {
             if (team.Equals(extraGamblesResults.GoldMedalTeam) || team.Equals(extraGamblesResults.SilverMedalTeam))
@@ -439,7 +548,7 @@ else
 
     public int GetPlayerPointsFromGuessngGoalAmount(PlayerModelViewModel player)
     {
-        ExtraGamblesModel playerExtraGambles = player.GetPlayerModel().ExtraGambles;
+        ExtraGamblesModel playerExtraGambles = GetExtraGamblesForPlayer(player);
 
         if (playerExtraGambles.GoalsInTournament.Equals(extraGamblesResults.GoalAmount))
         {
@@ -487,8 +596,8 @@ else
 
         foreach (var playerViewModel in StoredPlayers)
         {
-            List<GambleItemModel>? gambleItemModelsForPlayer = playerViewModel.GetPlayerModel().GambleItemModels;
-            if (gambleItemModelsForPlayer == null || gambleItemModelsForPlayer.Count != StoredGames.Count)
+            List<GambleItemModel>? gambleItemModelsForPlayer = playerViewModel.GambleItemsForEvent(selectedGamblingEvent);
+            if (gambleItemModelsForPlayer == null || gambleItemModelsForPlayer.Count == 0)
             {
                 mapGambleChecksumPerPlayer[playerViewModel] = "N/A";
                 continue;
@@ -530,7 +639,7 @@ else
     {
 
         GambleItemViewModel rightGamble = null;
-        foreach (var gamble in player.GetPlayerModel().GambleItemModels)
+        foreach (var gamble in player.GambleItemsForEvent(selectedGamblingEvent))
         {
             GambleItemViewModel givm = new GambleItemViewModel(gamble);
             if (game.IsGambleForGame(givm))
@@ -611,12 +720,12 @@ else
 
     public string getStyleForSilverTeam(PlayerModelViewModel player)
     {
-        if (player.GetPlayerModel().ExtraGambles.SilverTeam.Equals(extraGamblesResults.SilverMedalTeam))
+        if (GetExtraGamblesForPlayer(player).SilverTeam.Equals(extraGamblesResults.SilverMedalTeam))
         {
             return "text-align: center; color: green;";
         }
 
-        if (player.GetPlayerModel().ExtraGambles.SilverTeam.Equals(extraGamblesResults.GoldMedalTeam) == false)
+        if (GetExtraGamblesForPlayer(player).SilverTeam.Equals(extraGamblesResults.GoldMedalTeam) == false)
         {
             return "text-align: center; color: red;";
         }
@@ -626,12 +735,13 @@ else
 
     public string getStyleForGoldTeam(PlayerModelViewModel player)
     {
-        if (player.GetPlayerModel().ExtraGambles.GoldTeam.Equals(extraGamblesResults.GoldMedalTeam))
+        
+        if (GetExtraGamblesForPlayer(player).GoldTeam.Equals(extraGamblesResults.GoldMedalTeam))
         {
             return "text-align: center; color: green;";
         }
 
-        if (player.GetPlayerModel().ExtraGambles.GoldTeam.Equals(extraGamblesResults.SilverMedalTeam) == false)
+        if (GetExtraGamblesForPlayer(player).GoldTeam.Equals(extraGamblesResults.SilverMedalTeam) == false)
         {
             return "text-align: center; color: red;";
         }

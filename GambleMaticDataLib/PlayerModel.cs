@@ -36,7 +36,8 @@ public class PlayerModel
     public int Ticket { get; set; } = 0;
 
 
-    public ExtraGamblesModel ExtraGambles { get; set; }
+    [NotMapped]
+    public List<ExtraGamblesModel> ExtraGambleModels { get; set; } = new();
 
     [InverseProperty("PlayerModel")]
     public List<GambleItemModel> GambleItemModels { get; set; } = new List<GambleItemModel>();

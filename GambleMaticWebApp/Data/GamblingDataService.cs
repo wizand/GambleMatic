@@ -1,11 +1,6 @@
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel.DataAnnotations;
 
 using GambleMaticDataLib;
 
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Update.Internal;
 
 public class GamblingDataService
 {
@@ -50,10 +45,20 @@ public class GamblingDataService
         Console.WriteLine(result + " gambling events saved.");
     }
 
-
-    public async Task<List<GameModel>> GetGameModelsFromDatabaseAsync()
+    //TODO: Use the gambling event instead of all games
+    public async Task<List<GameModel>> GetAllGameModelsFromDatabaseAsync()
     {
         var list = await DbManager.GetAllGamesFromDatabase();
+        if (list == null)
+        {
+            list = new();
+        }
+        return list;
+    }
+
+    public async Task<List<GameModel>> GetGameModelsForEventFromDatabaseAsync(GamblingEvent gamblingEvent)
+    {
+        var list = await DbManager.GetAllGamesForGamblingEventFromDatabase(gamblingEvent);
         if (list == null)
         {
             list = new();
@@ -103,6 +108,16 @@ public class GamblingDataService
         return list;
     }
 
+    public async Task<List<GambleItemModel>> GetGambleItemsForGamblingEvent(GamblingEvent gamblingEvent)
+    {
+        var list = await DbManager.GetGambleItemsForEvent(gamblingEvent.GamblingEventId);
+        if (list == null)
+        {
+            list = new();
+        }
+        return list;
+    }
+
     public async Task<ExtraGamblesModel> GetExtraGamblesResultModel()
     {
         var list = await DbManager.GetExtraGamblesResultModelFromDatabase();
@@ -138,6 +153,11 @@ public class GamblingDataService
         return count;
     }
 
+    public async Task<int> RemoveExistingGamblesForPlayerInEvent(int playerId, int eventId)
+    {
+        int removedCount = await DbManager.DeleteGamblesForPlayerInEvent(playerId, eventId);
+        return removedCount;
+    }
 
     public async Task<int> RemoveExistingGamblesForPlayer(int playerId)
     {
@@ -179,7 +199,7 @@ public class GamblingDataService
     public static string NOT_SELECTED_IDENTIFIER = "-";
     public async void RefreshTeamsCacheFromDb()
     {
-        var gameModels = await GetGameModelsFromDatabaseAsync();
+        var gameModels = await GetAllGameModelsFromDatabaseAsync();
         RefreshTeamCache(gameModels);
     }
 

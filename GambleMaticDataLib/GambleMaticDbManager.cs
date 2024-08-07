@@ -34,6 +34,29 @@ namespace GambleMaticDataLib
 
         }
 
+        public async Task<int> DeleteGamblesForPlayerInEvent(int playerId, int eventId)
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+            var gambleItemsForPlayer = gambleMaticContext.Gambles.Where(g => g.PlayerModel.PlayerModelId == playerId);
+
+            var gamesInEvent = await gambleMaticContext.Games.Where(g => g.GamblingEvent.GamblingEventId == eventId).ToListAsync();
+
+            List<GambleItemModel> gambleItemsToRemove = new List<GambleItemModel>();
+            foreach ( GambleItemModel gambleItem in gambleItemsForPlayer)
+            {
+                if (gamesInEvent.Contains(gambleItem.GameModel))
+                {
+                    gambleItemsToRemove.Add(gambleItem);
+                }
+            }
+
+            gambleMaticContext.RemoveRange(gambleItemsToRemove);
+            int deletedCount = await gambleMaticContext.SaveChangesAsync();
+
+            return deletedCount;
+
+        }
+
         public async Task<List<ExtraGamblesModel>> GetExtraGamblesResultModelFromDatabase()
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
@@ -66,7 +89,11 @@ namespace GambleMaticDataLib
         public async Task<List<PlayerModel>> GetAllPlayersFromDatabase()
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
-            var res = await gambleMaticContext.Players.Include(p => p.ExtraGambles).Include(p=>p.GambleItemModels).ThenInclude(g=>g.GameModel).ToListAsync();
+            var res = await gambleMaticContext.Players
+                //.Include(p => p.ExtraGambles)
+                .Include(p=>p.GambleItemModels)
+                .ThenInclude(g=>g.GameModel)
+                .ToListAsync();
             return res;
         }
 
@@ -75,6 +102,22 @@ namespace GambleMaticDataLib
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
             var res = await gambleMaticContext.Gambles.Include(g => g.GameModel).Include(g => g.PlayerModel).ToListAsync();
             return res;
+        }
+
+
+        public async Task<List<GambleItemModel>> GetGambleItemsForEvent(int GambleEventId)
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+
+            var gambleItemsForEvent = await gambleMaticContext.Gambles
+                .Include(g => g.GameModel)
+                .Include(g => g.PlayerModel)
+                .Where(g => g.GameModel.GamblingEvent.GamblingEventId == GambleEventId)
+                .ToListAsync();
+
+            //var gamblingEvent = gambleMaticContext.GamblingEvents.Find(GambleEventId);
+            //var res = await gambleMaticContext.Gambles.Where(g => g.GameModel.GamblingEvent.GamblingEventId == GambleEventId).ToListAsync();
+            return gambleItemsForEvent;
         }
 
         public async Task<List<GambleItemModel>> GetGambleRowsForPlayerFromDatabase(int playerId)
@@ -89,7 +132,23 @@ namespace GambleMaticDataLib
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
             List<GamblingEvent> gamblingEvents = await gambleMaticContext.GamblingEvents
                 .Include(ge => ge.Games)
-                .Include(ge => ge.ExtraGambles).ToListAsync();
+                .Include(ge => ge.ExtraGamblesInEvent).ToListAsync();
+
+            var allPlayers = await GetAllPlayersFromDatabase();
+
+
+            foreach (var gamblingEvent in gamblingEvents)
+            {
+                var gambleItems = await GetGambleItemsForEvent(gamblingEvent.GamblingEventId);
+                
+                List<int?> uniquePlayerIds = gambleItems.Select(g => g.PlayerModelId).Distinct().ToList();
+                List<PlayerModel> playersInEvent = new();
+                foreach (var uniquePlayerId in uniquePlayerIds)
+                {
+                    playersInEvent.Add(allPlayers.Find(p => p.PlayerModelId == uniquePlayerId));
+                }
+                gamblingEvent.ParticipatingPlayers = playersInEvent;
+            }
             return gamblingEvents;
         }
 
@@ -137,6 +196,8 @@ namespace GambleMaticDataLib
         {
             using GambleMaticContext gambleMaticContext = new GambleMaticContext();
 
+            gameModel.GamblingEvent = null;
+            
             gambleMaticContext.Games.Add(gameModel);
             int result = await gambleMaticContext.SaveChangesAsync();
             return result;
@@ -150,6 +211,11 @@ namespace GambleMaticDataLib
             return result;
         }
 
-
+        public async Task<List<GameModel>> GetAllGamesForGamblingEventFromDatabase(GamblingEvent gamblingEvent)
+        {
+            using GambleMaticContext gambleMaticContext = new GambleMaticContext();
+            var res = await gambleMaticContext.Games.Where(g => g.GamblingEvent.GamblingEventId == gamblingEvent.GamblingEventId).ToListAsync();
+            return res;
+        }
     }
 }

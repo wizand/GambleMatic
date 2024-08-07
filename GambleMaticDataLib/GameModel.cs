@@ -9,12 +9,14 @@ public class GameModel
         
     }
 
-    public GameModel(DateTime gameDay, string home, string away, int? result = null)
+    public GameModel(DateTime gameDay, string home, string away, GamblingEvent gamblingEvent,int? result = null)
     {
         GameDay = gameDay;
         Home = home;
         Away = away;
         ResultInt = result;
+        GamblingEvent = gamblingEvent;
+        GamblingEventId = gamblingEvent.GamblingEventId;
     }
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

@@ -33,7 +33,11 @@ public class GamblingEvent
     public DateTime BeginDate { get; set; }
     public DateTime EndDate { get; set; }
 
-    public IEnumerable<GameModel> Games { get; set; }
-    public IEnumerable<ExtraGamblesModel> ExtraGambles { get; set; }
+    public IEnumerable<GameModel> Games { get; set; } 
+    public IEnumerable<ExtraGamblesModel> ExtraGamblesInEvent { get; set; }
+    
+    
+    [NotMapped]
+    public List<PlayerModel> ParticipatingPlayers { get; set; } = new();
 }
 

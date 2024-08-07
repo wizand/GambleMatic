@@ -1,9 +1,14 @@
 ﻿@page "/gambles"
 @using GambleMaticWebApp.Data
 @inject GamblingDataService _gameDataService
+@inject GamblingEventStateService _gamblingEventStateService
 <PageTitle>Players</PageTitle>
 
 <h1>Gambles Management page</h1>
+
+
+
+
 
 
 <Div id="playerSelectionDiv" Class="row">
@@ -17,6 +22,19 @@
                 foreach (var player in StoredPlayers)
                 {
                         <SelectItem Value="@index">@player.Name</SelectItem>
+                    index = index + 1;
+                }
+            }
+        </Select>
+    </Div>
+    <Div Class="td">Event:</Div>
+    <Div Class="td">
+        <Select TValue="int" SelectedValueChanged="@OnSelectedEventChanged">
+            @{
+                int index = 0;
+                foreach (var gamblingEvent in StoredGamblingEvents)
+                {
+                    <SelectItem Value="@index">@gamblingEvent.EventName</SelectItem>
                     index = index + 1;
                 }
             }
@@ -90,8 +108,8 @@
                 <TableHeaderCell>Semi final team 2:</TableHeaderCell>
                 <TableHeaderCell>Semi final team 3:</TableHeaderCell>
                 <TableHeaderCell>Semi final team 4:</TableHeaderCell>
-                <TableHeaderCell>Gold medal team:</TableHeaderCell>
                 <TableHeaderCell>Silver medal team:</TableHeaderCell>
+                <TableHeaderCell>Gold medal team:</TableHeaderCell>
                 <TableHeaderCell>Goals in tournament:</TableHeaderCell>
             </TableRow>
             <TableRow>
@@ -138,11 +156,17 @@
 
 
 @code {
-    PlayerModelViewModel selectedPlayer { get; set; } = new();
+
+    GamblingEventViewModel selectedGamblingEvent { get; set; } = new();
+    List<GamblingEventViewModel> StoredGamblingEvents { get; set; } = new();
+
+
     ExtraGamblesViewModel extraGamblesViewModel { get; set; } = new();
 
+    PlayerModelViewModel selectedPlayer { get; set; } = new();
     List<PlayerModelViewModel> StoredPlayers = new();
-    List<GameModelViewModel> StoredGames = new();
+
+    List<GameModelViewModel> StoredGamesInGamblingEvent = new();
     List<GameAndPredictionViewModel> ListOfGamePredictions = new();
 
     public string GambleRowChecksum { get; set; } = "";
@@ -153,9 +177,13 @@
     protected override async Task OnInitializedAsync()
     {
         await RefreshPlayersList();
-        await RefreshGamesList();
-        _gameDataService.RefreshTeamsCacheFromList(StoredGames);
+        await RefreshGamblingEventsList();
+        //StoredGamblingEvents = await _gamblingEventStateService.GetAllGamblingEventViewModels();
+        selectedGamblingEvent = await _gamblingEventStateService.GetSelectedGamblingEventAsViewModel();
+        StoredGamesInGamblingEvent = selectedGamblingEvent.GamesInEvent;
+        _gameDataService.RefreshTeamsCacheFromList(StoredGamesInGamblingEvent);
         await OnSelectedPlayerChanged(0);
+        await RefreshGamesList();
 
 
 
@@ -167,7 +195,7 @@
         {
             if ( _gameDataService.AllTeams == null)
             {
-                _gameDataService.RefreshTeamsCacheFromList(StoredGames);
+                _gameDataService.RefreshTeamsCacheFromList(StoredGamesInGamblingEvent);
             }
             return _gameDataService.AllTeams;
         }
@@ -185,12 +213,36 @@
     {
         selectedPlayer = StoredPlayers[selectedValue];
 
-        var ctw = selectedPlayer.GetPlayerModel().GambleItemModels;
-        Console.WriteLine("Selected player index: " + selectedValue + " selected player name: " + selectedPlayer.Name + " gambles: " + ctw.Count);
 
+        Console.WriteLine("Selected player index: " + selectedValue + " selected player name: " + selectedPlayer.Name);
+        await RefreshGamblePreditionsForPlayer();
+    }
+
+
+    public async Task OnSelectedEventChanged(int selectedValue)
+    {
+        _gamblingEventStateService.SetSelectedGamblingEvent(selectedValue);
+        selectedGamblingEvent = await _gamblingEventStateService.GetSelectedGamblingEventAsViewModel();
+
+        Console.WriteLine("Selected event changed to: " + selectedValue);
+        await RefreshGamesList();
+        await RefreshGamblePreditionsForPlayer();
+    }
+
+    public async Task RefreshGamblingEventsList()
+    {
+        StoredGamblingEvents = await _gamblingEventStateService.GetAllGamblingEventViewModels();
+    }
+
+
+
+    public async Task RefreshGamblePreditionsForPlayer() 
+    {
+        var ctw = selectedPlayer.GambleItemsForEvent(selectedGamblingEvent);
+        Console.WriteLine("Selected player name: " + selectedPlayer.Name + " gambles: " + ctw.Count);
 
         //There are no previous games saved or the data doesnt correspond to the amount of games
-        if (ctw == null || ctw.Count == 0 || ctw.Count != StoredGames.Count)
+        if (ctw == null || ctw.Count == 0 || ctw.Count != StoredGamesInGamblingEvent.Count)
         {
             HeaderText = "Create new gambles for player " + selectedPlayer.Name;
             IsCreatingNew = true;
@@ -203,7 +255,16 @@
             await RefreshExistingGamblesAndPredictionsList(ctw);
         }
 
-        ExtraGamblesModel egModel = selectedPlayer.GetPlayerModel().ExtraGambles;
+
+
+        int selectedId = selectedGamblingEvent.GamblingEventId;
+        await _gamblingEventStateService.UpdateGamblingEvents();
+        await RefreshGamblingEventsList();
+        selectedGamblingEvent = StoredGamblingEvents.Find(x => x.GamblingEventId == selectedId);
+
+        ExtraGamblesModel? egModel = selectedGamblingEvent.GetExtraGamblingModelForPlayer(selectedPlayer.GetPlayerModel());
+        
+        //ExtraGamblesModel egModel = selectedPlayer.GetPlayerModel().ExtraGambles;
         if (egModel != null)
         {
             extraGamblesViewModel = new ExtraGamblesViewModel(egModel);
@@ -239,11 +300,16 @@
     }
 
 
+
+
     public async Task OnSavePlayerExtraGambles() 
     {
         var player = selectedPlayer.GetPlayerModel();
-        ExtraGamblesModel extraGambles = player.ExtraGambles;
-        if (player.ExtraGambles == null)
+        ExtraGamblesModel extraGambles = extraGamblesViewModel.GetExtraGambleModel();
+
+
+        //if (player.ExtraGambles == null)
+        if (extraGambles == null)
         {
             extraGambles = new ExtraGamblesModel();
         } 
@@ -257,6 +323,7 @@
         extraGambles.GoalsInTournament = extraGamblesViewModel.GoalAmount;
 
         extraGambles.PlayerModelId = player.PlayerModelId;
+        extraGambles.GamblingEventId = selectedGamblingEvent.GamblingEventId;
 
         int storedCount = await _gameDataService.AddExtraGamblesToDatabaseAsync(extraGambles);
         Console.WriteLine("Stored extra gambles for player " + player.ShortName);
@@ -271,13 +338,14 @@
 
     public async Task OnSavePlayerGamble()
     {
-        int removedCount = await _gameDataService.RemoveExistingGamblesForPlayer(selectedPlayer.GetPlayerModel().PlayerModelId);
+        int removedCount = await _gameDataService.RemoveExistingGamblesForPlayerInEvent(selectedPlayer.GetPlayerModel().PlayerModelId, selectedGamblingEvent.GamblingEventId);
         Console.WriteLine("Removed " + removedCount + " previous gambles for player " + selectedPlayer.Name);
 
         List<GambleItemModel> newGambles = new();
         foreach (var pred in ListOfGamePredictions)
         {
             GambleItemModel newGamble = new GambleItemModel();
+
             newGamble.PlayerModelId = selectedPlayer.GetPlayerModel().PlayerModelId;
             newGamble.GameModelId = pred.GameView.GetGameModel().GameModelId;
             newGamble.Guess = pred.Prediction;
@@ -290,6 +358,7 @@
         //OnSavePlayerExtraGambles();
 
         //already done in the extra gambles.. 
+
         await RefreshPlayersList();
         await OnSelectedPlayerChanged(getPlayerIndexFromList(selectedPlayer.GetPlayerModel()));
     }
@@ -312,11 +381,17 @@
     public async Task OnSavePlayerGambleFromChecksum()
     {
         string tmp = GambleRowChecksumToSave.Trim().ToUpper();
-        if (tmp.Length != StoredGames.Count)
+        tmp = tmp.Replace(" ", "");
+        tmp = tmp.Replace("A", "H");
+        tmp = tmp.Replace("B", "D");
+        tmp = tmp.Replace("C", "A");
+        if (tmp.Length != StoredGamesInGamblingEvent.Count)
         {
-            Console.WriteLine("Invalid checksum len. ChecksumLen = [" + tmp.Length + "]" + " games count = [" + StoredGames.Count + "]");
+            Console.WriteLine("Invalid checksum len. ChecksumLen = [" + tmp.Length + "]" + " games count = [" + StoredGamesInGamblingEvent.Count + "]");
             return;
         }
+
+
 
         string correctKeys = "HDTA";
         foreach (char c in tmp)
@@ -328,7 +403,7 @@
             }
         }
 
-        for (int gameIndex = 0; gameIndex < StoredGames.Count; gameIndex++)
+        for (int gameIndex = 0; gameIndex < StoredGamesInGamblingEvent.Count; gameIndex++)
         {
             switch (tmp[gameIndex]) 
             {
@@ -346,6 +421,7 @@
         }
 
         Console.WriteLine("Saving a gamble row from checksum " + tmp + " to player " + selectedPlayer.Name);
+        GambleRowChecksumToSave = "";
         await OnSavePlayerGamble();
 
     }
@@ -354,6 +430,8 @@
     {
         var playerModels = await _gameDataService.GetPlayerModelsFromDatabaseAsync();
         StoredPlayers = new();
+
+
         foreach (PlayerModel playerModel in playerModels)
         {
             StoredPlayers.Add(new PlayerModelViewModel(playerModel));
@@ -362,20 +440,20 @@
 
     public async Task RefreshGamesList()
     {
-        var gameModels = await _gameDataService.GetGameModelsFromDatabaseAsync();
-        StoredGames = new();
-        foreach (GameModel gameModel in gameModels)
+        var gameModels = selectedGamblingEvent.GamesInEvent;
+        StoredGamesInGamblingEvent = new();
+        foreach (GameModelViewModel gameModelViewModel in gameModels)
         {
-            StoredGames.Add(new GameModelViewModel(gameModel));
+            StoredGamesInGamblingEvent.Add(gameModelViewModel);
         }
 
-        _gameDataService.RefreshTeamsCacheFromList(StoredGames);
+        _gameDataService.RefreshTeamsCacheFromList(StoredGamesInGamblingEvent);
     }
 
     public async Task RefreshNewGamesAndPredictionsList()
     {
         ListOfGamePredictions = new List<GameAndPredictionViewModel>();
-        foreach (GameModelViewModel gameView in StoredGames)
+        foreach (GameModelViewModel gameView in StoredGamesInGamblingEvent)
         {
             ListOfGamePredictions.Add(new GameAndPredictionViewModel(gameView));
         }

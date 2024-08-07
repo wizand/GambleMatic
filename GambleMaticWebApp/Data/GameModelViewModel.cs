@@ -22,11 +22,11 @@ public class GameModelViewModel
         }
     }
 
-    public GameModelViewModel(DateTime gameDay, string home, string away, int? result = null)
+    public GameModelViewModel(DateTime gameDay, string home, string away, GamblingEvent gamblingEvent, int? result = null)
     {
         if (_gameModel == null)
         {
-            _gameModel = new GameModel(gameDay, home, away, result);
+            _gameModel = new GameModel(gameDay, home, away, gamblingEvent, result);
         }
         else
         {
@@ -34,6 +34,7 @@ public class GameModelViewModel
             _gameModel.Home = home;
             _gameModel.Away = away;
             _gameModel.ResultInt = result;
+            _gameModel.GamblingEvent = gamblingEvent;
             if (result == null)
             {
                 OriginalResult = -99;
@@ -105,8 +106,13 @@ public class GameModelViewModel
 
     internal bool IsGambleForGame(GambleItemViewModel gambleitem)
     {
-        var gameModel = gambleitem.GambleItem.GameModel;
-        if ( gameModel != null)
+        return IsGambleForGame(gambleitem.GambleItem);
+    }
+
+    internal bool IsGambleForGame(GambleItemModel gambleitem)
+    {
+        var gameModel = gambleitem.GameModel;
+        if (gameModel != null)
         {
             if (gameModel.Home.Equals(this.Home) && gameModel.Away.Equals(this.Away) && gameModel.GameDay.Equals(this.GameDay))
             {

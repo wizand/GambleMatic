@@ -1,6 +1,7 @@
 ﻿@page "/games"
 @using GambleMaticWebApp.Data
 @inject GamblingDataService _gameDataService
+@inject GamblingEventStateService _gamblingEventStateService
 <PageTitle>Games</PageTitle>
 
 <h1>Games Management page</h1>
@@ -50,8 +51,12 @@
 
 </Div>
 
-<Div id="GamesList">
-    <h2>Games in database:</h2>
+
+    @if ( @selectedGamblingEvent != null)
+    {
+<Div id="GamesListForEvent">
+        
+    <h2>Games in database for the event @selectedGamblingEvent.EventName</h2>
     <Button Color="Color.Primary" Clicked="@UpdateGameResults">Update all results</Button>
     <Table Striped Hoverable Bordered>
         <TableHeader>
@@ -65,33 +70,36 @@
             </TableRow>
         </TableHeader>
         <TableBody>
-    @{
-        foreach (var game in @StoredGames)
-        {
-            <TableRow>
-                <TableRowCell>@game.GameDayStr</TableRowCell>
-                <TableRowCell>@game.Home</TableRowCell>
-                <TableRowCell>@game.Away</TableRowCell>
-                <TableRowCell>@game.ResultStr</TableRowCell>
-                <TableRowCell>
-                    <RadioGroup TValue="int" Name="Game result" @bind-CheckedValue="@game.ResultInt" Buttons>
-                        <Radio Value="-99">NO RESULT</Radio>
-                        <Radio Value="-1">HOME</Radio>
-                        <Radio Value="0">DRAW</Radio>
-                        <Radio Value="1">AWAY</Radio>
-                    </RadioGroup>
-                </TableRowCell>
-                <TableRowCell>
-                    <Button Color="Color.Primary" Clicked="@((p) => UpdateGameResult(@game))">Update result</Button>
-                </TableRowCell>
-            </TableRow>
-        }
-    }
+            @{
+                foreach (var game in selectedGamblingEvent.GamesInEvent)
+                {
+                    <TableRow>
+                        <TableRowCell>@game.GameDayStr</TableRowCell>
+                        <TableRowCell>@game.Home</TableRowCell>
+                        <TableRowCell>@game.Away</TableRowCell>
+                        <TableRowCell>@game.ResultStr</TableRowCell>
+                        <TableRowCell>
+                            <RadioGroup TValue="int" Name="Game result" @bind-CheckedValue="@game.ResultInt" Buttons>
+                                <Radio Value="-99">NO RESULT</Radio>
+                                <Radio Value="-1">HOME</Radio>
+                                <Radio Value="0">DRAW</Radio>
+                                <Radio Value="1">AWAY</Radio>
+                            </RadioGroup>
+                        </TableRowCell>
+                        <TableRowCell>
+                            <Button Color="Color.Primary" Clicked="@((p) => UpdateGameResult(@game))">Update result</Button>
+                        </TableRowCell>
+                    </TableRow>
+                }
+            }
         </TableBody>
     </Table>
 </Div>
+}
 
-<Div id="extraGambles">
+
+
+<Div id="extraGamblesForEvent">
     <Table>
         <TableHeader>
             <TableRow>
@@ -194,6 +202,8 @@
     public async void OnSaveExtraGambleResults() 
     {
         int count = await _gameDataService.SaveExtraGamblesResultModel(extraGamblesResultViewModel.GetExtraGambleModel());
+        // int prevSelectedEvent = selectedGamblingEvent.GamblingEventId;
+        // _gamblingEventStateService.UpdateGamblingEvents();
     }
 
     ExtraGamblesViewModel extraGamblesResultViewModel { get; set; } = new();
@@ -205,12 +215,25 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await RefreshGamblingEventsList();
 
-        ExtraGamblesModel extraGambleModel = await _gameDataService.GetExtraGamblesResultModel();
-        extraGamblesResultViewModel = new(extraGambleModel);
+        await RefreshGamblingEvents();
+        selectedGamblingEvent = GamblingEvents[0];
+
+        //ExtraGamblesModel extraGambleModel = await _gameDataService.GetExtraGamblesResultModel();
+        foreach (var extraGamble in selectedGamblingEvent.ExtraGamblesInEvent)
+        {
+            Console.WriteLine("Extra gamble: " + extraGamble.ToString());
+            if (extraGamble.IsResultModel)
+            {
+                extraGamblesResultViewModel = extraGamble;
+                break;
+            }
+        }
+
+        //extraGamblesResultViewModel = new(extraGambleModel);
         //Today = DateTime.UtcNow.ToString("d");
-        await RefreshGamesList();
+        //TODO: Use the gambling event to get the relevant games, this will be obsolete
+        await RefreshAllGamesList();
     }
 
     public async Task AddNewGameAsync()
@@ -224,10 +247,35 @@
 
         Console.WriteLine("Creating a new game: " + newGameModel.ToString());
 
-        GameModel gm = new GameModel(newGameModel.Date, newGameModel.Home, newGameModel.Away, null );
+        GameModel gm = new GameModel(newGameModel.Date, newGameModel.Home, newGameModel.Away, selectedGamblingEvent.GamblingEvent, null );
         await _gameDataService.AddGameToDatabaseAsync(gm);
         newGameModel = new();
-        await RefreshGamesList();
+        await RefreshGamblingEvents();
+        await RefreshAllGamesList();
+
+    }
+
+    public async Task AddNewGameToEventAsync()
+    {
+        if (String.IsNullOrWhiteSpace(newGameModel.Home) ||
+             String.IsNullOrWhiteSpace(newGameModel.Away))
+        {
+            Console.WriteLine("Invalid game object: " + newGameModel.ToString());
+            return;
+        }
+
+        if ( selectedGamblingEvent == null )
+        {
+            Console.WriteLine("No gambling event selected, cannot add game to event.");
+            return;
+        }
+
+        Console.WriteLine("Creating a new game: " + newGameModel.ToString());
+
+        GameModel gm = new GameModel(newGameModel.Date, newGameModel.Home, newGameModel.Away, null);
+        await _gameDataService.AddGameToDatabaseAsync(gm);
+        newGameModel = new();
+        await RefreshAllGamesList();
 
     }
 
@@ -237,24 +285,44 @@
     public GamblingEventViewModel selectedGamblingEvent { get; set; }
     public async Task OnSelectedEventChanged(int selectedValue)
     {
-        Console.WriteLine("Selected event changed to: " + selectedValue);
-        await RefreshGamesList();
+        if ( GamblingEvents == null || GamblingEvents.Count == 0)
+        {
+            await RefreshGamblingEvents();   
+        }
+        _gamblingEventStateService.SetSelectedGamblingEvent(selectedValue);
+        var gamblingEvent = await _gamblingEventStateService.GetSelectedGamblingEvent();
+        selectedGamblingEvent = new GamblingEventViewModel(gamblingEvent);
+        Console.WriteLine("Selected event changed to: " + selectedGamblingEvent.EventName);
+
+        foreach (var extraGamble in selectedGamblingEvent.ExtraGamblesInEvent)
+        {
+            if (extraGamble.IsResultModel)
+            {
+                extraGamblesResultViewModel = extraGamble;
+                break;
+            }
+        }
+
+        await RefreshAllGamesList();
     }
 
-    public async Task RefreshGamblingEventsList()
+    public async Task RefreshGamblingEvents()
     {
-        var gamblingEventModels = await _gameDataService.GetGamblingEventModelsFromDatabaseAsync();
+        GamblingEvents = new();
+        
+        var gamblingEventModels = await _gamblingEventStateService.GetGamblingEvents();
         GamblingEvents = new();
         foreach (GamblingEvent gambleEvent in gamblingEventModels)
         {
             GamblingEvents.Add(new GamblingEventViewModel(gambleEvent));
         }
-        selectedGamblingEvent = GamblingEvents[0];
     }
 
+  
 
 
-    
+
+
     /// //////////////////////////////////////////////////////////
     
 
@@ -267,13 +335,13 @@
         }
         int result = await _gameDataService.UpdateGameResults(gameToUpdate.GetGameModel());
         Console.WriteLine("Game results updated for game " + gameToUpdate.MatchTitle + " from " + gameToUpdate.OriginalResult + " to " + gameToUpdate.ResultInt);
-        await RefreshGamesList();
+        await RefreshAllGamesList();
     }
 
     public async Task UpdateGameResults()
     { 
         List<GameModel> gameModelsToUpdate = new();
-        foreach (var gameModelViewModel in StoredGames)
+        foreach (var gameModelViewModel in selectedGamblingEvent.GamesInEvent)
         {
             if (gameModelViewModel.ResultInt != gameModelViewModel.OriginalResult)
             {
@@ -286,15 +354,16 @@
             result = await _gameDataService.UpdateMultipleGameResults(gameModelsToUpdate);
         }
         Console.WriteLine("Game results updated for " + result + " games.");
-        await RefreshGamesList();
+        await RefreshAllGamesList();
     }
 
 
 
-    public async Task RefreshGamesList()
+    public async Task RefreshAllGamesList()
     { 
-        var gameModels = await _gameDataService.GetGameModelsFromDatabaseAsync();
+        var gameModels = await _gameDataService.GetAllGameModelsFromDatabaseAsync();
         StoredGames = new();
+
         foreach (GameModel gameModel in gameModels)
         {
             StoredGames.Add(new GameModelViewModel(gameModel));

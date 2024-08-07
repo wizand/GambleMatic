@@ -44,8 +44,9 @@ allGameData.AllGames = allGames;
 string json = System.Text.Json.JsonSerializer.Serialize(allGameData);
 
 File.WriteAllText( "games.json", json);
+File.WriteAllText("games_insert.sql", allGameData.GetAllGamesAsSqlInser());
 
-foreach( var country in AllCountriesContainer.CountriesInTournament)
+foreach ( var country in AllCountriesContainer.CountriesInTournament)
 {
     //ff.SaveFlagForCountry(country);
     ff.GetFlagForCountry(country).GetAwaiter().GetResult();
@@ -163,4 +164,20 @@ public class AllGameDataForExport
     }
     public List<Country> AllParticipatingCountries { get; set; } = new();
     public List<Game> AllGames { get; set; } = new();
+
+    public string GetAllGamesAsSqlInser()
+    {
+        StringBuilder sb = new();
+        string prefix = "INSERT INTO [dbo].[Games] VALUES (convert(datetime,";
+        //INSERT INTO [dbo].[Games] VALUES (convert(datetime,'26.11.2022 19:00',104),'France','Denmark',null,63);
+        for ( int i = 0; i < AllGames.Count; i++)
+        {
+            sb.Append(prefix);
+            string date = AllGames[i].GameDay.ToString("dd.MM.yyyy HH:mm");
+            sb.Append( $"'{date}',104), ");
+            sb.Append($" '{AllGames[i].Home.Name}',");
+            sb.Append($" '{AllGames[i].Away.Name}',null,{i}, 2);\n");
+        }
+        return sb.ToString();
+    }
 }
